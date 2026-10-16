@@ -1,0 +1,4 @@
+recipe,t1,t2,t1_frac,t2_frac,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,train_seconds
+bpe_super_pa,40000,71800,0.502,0.9,79744,super,33.691,5.9134,1.2579,0.081,0.0453,rus_Cyrl,eng_Latn,17370.0
+bpe_super_pa,40000,59800,0.502,0.75,79744,super,33.854,5.9298,1.2046,0.0635,0.0352,deu_Latn,eng_Latn,31869.1
+bpe_super_pa,40000,47800,0.502,0.599,79744,super,34.219,5.9016,1.1479,0.0424,0.022,deu_Latn,eng_Latn,43436.6

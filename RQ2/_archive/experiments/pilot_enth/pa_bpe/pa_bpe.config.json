@@ -1,0 +1,21 @@
+{
+  "phases": [
+    {
+      "n_merges": 2000,
+      "stage": "sub",
+      "merge_rule": "parity"
+    }
+  ],
+  "inputs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_mvp.txt",
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\th_mvp.txt"
+  ],
+  "devs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_dev_mvp.txt",
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\th_dev_mvp.txt"
+  ],
+  "total_merges": 2000,
+  "phase_seconds": [
+    75.8911392998416
+  ]
+}

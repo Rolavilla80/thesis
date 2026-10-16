@@ -1,0 +1,4 @@
+recipe,vocab,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,train_seconds
+classical_bpe,500,244,sub,115.149,1.715,1.9427,0.2043,0.1141,tha_Thai,eng_Latn,30.3
+superbpe,500,244,super,116.32,1.6974,1.9083,0.1971,0.1097,tha_Thai,eng_Latn,60.2
+bpe_pa_super,500,244,super,113.996,1.7379,1.51,0.1305,0.0732,tha_Thai,eng_Latn,69.1

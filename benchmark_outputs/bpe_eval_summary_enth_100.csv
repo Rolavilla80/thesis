@@ -1,0 +1,3 @@
+run,corpus,total_chars,total_final_tokens,tokens_per_char,unique_token_types,unique_complete,unique_prefix,unique_invalid,token_occ_complete,token_occ_prefix,token_occ_invalid
+none,en_dev,174754,137112,0.7846000663790242,144,123,6,15,136990,46,76
+none,th_dev,139811,137402,0.9827695960975888,234,130,24,80,28701,42414,66287

@@ -1,0 +1,18 @@
+{
+  "name": "checkpoint_commit_mode_test_512",
+  "vocab_size": 512,
+  "transitions": {
+    "super_vocab": 384,
+    "parity_vocab": 448
+  },
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "pretokenizer": "commit_bytelevel",
+  "parity_reference": "phase",
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "note": "Small commit-mode checkpoint smoke test; not an experimental result."
+}

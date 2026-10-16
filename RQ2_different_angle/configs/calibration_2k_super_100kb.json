@@ -1,0 +1,17 @@
+{
+  "name": "five_language_2k_super_100kb_calibration",
+  "vocab_size": 2000,
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "tokens_per_segment", "gini", "worst_best_ratio"],
+  "note": "Calibration comparator: SuperBPE-style transition at vocabulary size 1,200.",
+  "phases": [
+    {"name": "Csub", "n_merges": 944, "stage": "sub", "rule": "classical"},
+    {"name": "Csuper", "n_merges": 800, "stage": "super", "rule": "classical"}
+  ]
+}

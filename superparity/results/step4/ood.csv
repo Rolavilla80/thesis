@@ -1,0 +1,13 @@
+scale,role,mean_tokens_per_line,mean_bytes_per_token,disparity,worst,best,n_languages
+8000,endpoint,54.692,3.6887,1.4269,tha_Thai,zho_Hans,9
+8000,fair,54.51,3.806,1.0792,arb_Arab,tha_Thai,9
+8000,p90,54.194,3.7544,1.3,hin_Deva,zho_Hans,9
+20000,endpoint,45.108,4.4822,1.4357,rus_Cyrl,zho_Hans,9
+20000,fair,44.881,4.6214,1.0903,kor_Hang,tha_Thai,9
+20000,p90,44.727,4.5477,1.3156,hin_Deva,zho_Hans,9
+50000,endpoint,37.577,5.3949,1.3814,rus_Cyrl,zho_Hans,9
+50000,fair,37.714,5.493,1.0834,arb_Arab,tha_Thai,9
+50000,p90,37.465,5.4376,1.2924,rus_Cyrl,zho_Hans,9
+80000,endpoint,34.689,5.8501,1.3718,rus_Cyrl,zho_Hans,9
+80000,fair,35.206,5.8816,1.0881,rus_Cyrl,tha_Thai,9
+80000,p90,34.61,5.8864,1.2668,rus_Cyrl,zho_Hans,9

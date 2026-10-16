@@ -1,0 +1,17 @@
+{
+  "name": "balanced_2k_super_t1000",
+  "vocab_size": 2000,
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "Balanced local comparator: SuperBPE-style transition at vocabulary size 1,000.",
+  "phases": [
+    {"name": "Csub", "n_merges": 744, "stage": "sub", "rule": "classical"},
+    {"name": "Csuper", "n_merges": 1000, "stage": "super", "rule": "classical"}
+  ]
+}

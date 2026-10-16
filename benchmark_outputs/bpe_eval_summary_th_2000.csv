@@ -1,0 +1,7 @@
+run,corpus,total_chars,total_final_tokens,tokens_per_char,unique_token_types,unique_complete,unique_prefix,unique_invalid,token_occ_complete,token_occ_prefix,token_occ_invalid
+none,th_dev,62153,17026,0.27393689765578494,1542,1439,43,60,16691,164,171
+none,combined,62153,17026,0.27393689765578494,,,,,16691,164,171
+local,th_dev,62153,16883,0.27163612375911056,1522,1492,10,20,16806,38,39
+local,combined,62153,16883,0.27163612375911056,,,,,16806,38,39
+original,th_dev,62153,17026,0.27393689765578494,1542,1439,43,60,16691,164,171
+original,combined,62153,17026,0.27393689765578494,,,,,16691,164,171

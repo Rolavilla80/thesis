@@ -1,0 +1,11 @@
+recipe,transition,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,train_seconds
+classical_bpe,,244,sub,115.149,1.715,1.9427,0.2043,0.1141,tha_Thai,eng_Latn,89.6
+pa_bpe,,244,sub,113.421,1.77,1.2656,0.0624,0.0336,hin_Deva,eng_Latn,57.0
+superbpe,120,244,super,116.026,1.7024,1.9295,0.1987,0.1106,tha_Thai,eng_Latn,88.1
+bpe_then_pa_super,120,244,super,116.412,1.7246,1.2605,0.0674,0.0331,arb_Arab,eng_Latn,64.6
+bpe_then_pa,120,244,sub,113.046,1.7709,1.4018,0.0926,0.0492,hin_Deva,eng_Latn,33.1
+pa_then_super,120,244,super,113.971,1.7339,1.573,0.1503,0.0844,tha_Thai,eng_Latn,129.8
+pa_super,,244,super,117.066,1.7304,1.062,0.0177,0.0085,tur_Latn,eng_Latn,0.0
+bpe_pa_super,,244,super,113.996,1.7379,1.51,0.1305,0.0732,tha_Thai,eng_Latn,136.8
+bpe_super_pa,,244,super,115.032,1.7425,1.2665,0.0714,0.0364,kor_Hang,eng_Latn,316.3
+bpe_pa_super_pa,,244,super,114.408,1.746,1.3281,0.0878,0.0477,hin_Deva,eng_Latn,516.7

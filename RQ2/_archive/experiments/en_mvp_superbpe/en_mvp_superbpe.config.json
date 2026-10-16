@@ -1,0 +1,22 @@
+{
+  "strategy": "superbpe",
+  "phases": [
+    {
+      "merge_rule": "classical",
+      "whitespace": "on",
+      "n_merges": 3000
+    },
+    {
+      "merge_rule": "classical",
+      "whitespace": "off",
+      "n_merges": 1000
+    }
+  ],
+  "inputs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_mvp.txt"
+  ],
+  "devs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_dev_mvp.txt"
+  ],
+  "total_merges": 4000
+}

@@ -1,0 +1,7 @@
+t1,t2,t1_frac,t2_frac,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,kind,train_seconds
+149,298,0.2,0.401,744,super,91.827,2.2053,1.1571,0.0389,0.0151,arb_Arab,eng_Latn,interior,251.3
+149,521,0.2,0.7,744,super,90.622,2.2137,1.2684,0.0678,0.0352,kor_Hang,eng_Latn,interior,1471.2
+149,744,0.2,1.0,744,super,91.27,2.1581,1.6552,0.1563,0.0846,tha_Thai,eng_Latn,superbpe_edge,0.0
+298,298,0.401,0.401,744,super,91.794,2.2052,1.1598,0.0397,0.0151,arb_Arab,eng_Latn,bpe_then_pa_super_edge,253.0
+298,521,0.401,0.7,744,super,90.614,2.2145,1.2715,0.0673,0.0348,hin_Deva,eng_Latn,interior,297.4
+298,744,0.401,1.0,744,super,91.264,2.1589,1.6689,0.1565,0.0849,tha_Thai,eng_Latn,superbpe_edge,0.0

@@ -2,11 +2,25 @@ import csv
 import os
 from collections import Counter
 
+""""
 CSV_FILES = [
     r"benchmark_outputs\enzh_1000_none_log_newidea.csv",
     r"benchmark_outputs\enzh_1000_max_log_newidea.csv",
     r"benchmark_outputs\enzh_1000_local_log_newidea.csv",
     r"benchmark_outputs\enzh_1000_rescan_log_newidea.csv",
+]
+"""
+
+CSV_FILES = [
+    r"benchmark_outputs\enth_10000_none_log.csv",
+    r"benchmark_outputs\enth_10000_block3_log.csv",
+    r"benchmark_outputs\enth_10000_block4_log.csv",
+    r"benchmark_outputs\enth_10000_block5_log.csv",
+    r"benchmark_outputs\enth_10000_block34_log.csv",
+    r"benchmark_outputs\enth_10000_block35_log.csv",
+    r"benchmark_outputs\enth_10000_block45_log.csv",
+    r"benchmark_outputs\enth_10000_block345_log.csv",
+    r"benchmark_outputs\enth_10000_char_first_log.csv",
 ]
 
 def summarize_csv(path: str) -> dict:
@@ -53,7 +67,7 @@ def summarize_csv(path: str) -> dict:
         "first_bad": first_bad,
         "merged_complete": merged_state_counter["complete"],
         "merged_prefix": merged_state_counter["prefix"],
-        "merged_invalid": merged_state_counter["invalid"],
+        "merged_suffix": merged_state_counter["suffix"],
     }
 
 def fmt_step(x):
@@ -65,7 +79,7 @@ def main():
         f"{'file':35} {'total':>7} {'good':>7} {'recov':>7} {'bad':>7} "
         f"{'good%':>8} {'recov%':>8} {'bad%':>8} "
         f"{'first_recov':>12} {'first_bad':>10} "
-        f"{'complete':>9} {'prefix':>8} {'invalid':>8}"
+        f"{'complete':>9} {'prefix':>8} {'suffix':>8}"
     )
     print("=" * 150)
 
@@ -80,7 +94,7 @@ def main():
             f"{s['total']:7d} {s['good']:7d} {s['recoverable']:7d} {s['bad']:7d} "
             f"{s['good_pct']:8.2f} {s['recoverable_pct']:8.2f} {s['bad_pct']:8.2f} "
             f"{fmt_step(s['first_recoverable']):>12} {fmt_step(s['first_bad']):>10} "
-            f"{s['merged_complete']:9d} {s['merged_prefix']:8d} {s['merged_invalid']:8d}"
+            f"{s['merged_complete']:9d} {s['merged_prefix']:8d} {s['merged_suffix']:8d}"
         )
 
     print("=" * 150)

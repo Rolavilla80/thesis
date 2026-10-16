@@ -1,0 +1,17 @@
+{
+  "name": "five_language_2k_100kb_calibration",
+  "vocab_size": 2000,
+  "transitions": {
+    "super_vocab": 1200,
+    "parity_vocab": 1600
+  },
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "tokens_per_segment", "gini", "worst_best_ratio"],
+  "note": "Timing calibration only; deterministic whole-document prefix from the fresh local sources."
+}

@@ -1,0 +1,111 @@
+diff --git a/script_bpe/pretokenize/__init__.py b/script_bpe/pretokenize/__init__.py
+index 6b1d9f9..3fea0a4 100644
+--- a/script_bpe/pretokenize/__init__.py
++++ b/script_bpe/pretokenize/__init__.py
+@@ -40,6 +40,10 @@ PRETOKENIZER_REGISTRY: dict[str, PretokenizerConfig] = {
+     "bytes_gpt4o_cb": UTF8PretokenizerConfig(regex_pattern=GPT4O_REGEX),
+     "bytes_gpt4o_ll_cb": UTF8PretokenizerConfig(regex_pattern=GPT4O_REGEX_LL),  # length-limited (paper's exact)
+     "bytes_gpt4o_cbi": UTF8PretokenizerConfig(regex_pattern=GPT4O_REGEX, enforce_inherited=True),
++    "bytes_gpt4o_cbg": UTF8PretokenizerConfig(regex_pattern=GPT4O_REGEX, enforce_grapheme=True),
++    "bytes_gpt4o_cbg_novirama": UTF8PretokenizerConfig(
++        regex_pattern=GPT4O_REGEX, enforce_grapheme=True, grapheme_block_virama_end=False
++    ),
+     "bytes_nosplit_cb": UTF8PretokenizerConfig(regex_pattern=None),
+     # Backward-compatible alias names expected by tests
+     "bytes_nosplit_cbi": UTF8PretokenizerConfig(regex_pattern=None, enforce_inherited=True),
+@@ -54,6 +58,9 @@ PRETOKENIZER_REGISTRY: dict[str, PretokenizerConfig] = {
+     "scriptenc_gpt4o_cbi": ScriptPretokenizerConfig(
+         regex_pattern=GPT4O_REGEX, script_split=False, enforce_inherited=True
+     ),
++    "scriptenc_gpt4o_cbg": ScriptPretokenizerConfig(
++        regex_pattern=GPT4O_REGEX, script_split=False, enforce_grapheme=True
++    ),
+     "scriptenc_nosplit_cb": ScriptPretokenizerConfig(regex_pattern=None, script_split=False),
+     "scriptenc2_cb": ScriptPretokenizerConfig(script_config=ScriptEncodingV2, enforce_char_boundaries=True),
+     "scriptenc2_cbi": ScriptPretokenizerConfig(script_config=ScriptEncodingV2, enforce_inherited=True),
+diff --git a/script_bpe/pretokenize/pretokenizer.py b/script_bpe/pretokenize/pretokenizer.py
+index 012b86f..26e6eda 100644
+--- a/script_bpe/pretokenize/pretokenizer.py
++++ b/script_bpe/pretokenize/pretokenizer.py
+@@ -26,6 +26,8 @@ class PretokenizerConfig(BaseModel):
+     # token restrictions
+     enforce_char_boundaries: bool = True
+     enforce_inherited: bool = False
++    enforce_grapheme: bool = False  # type-level grapheme-cluster rules (L1/L2, R1-R5)
++    grapheme_block_virama_end: bool = True  # R2 toggle: block tokens ending in InCB=Linker
+     # disallow extra fields
+     model_config = ConfigDict(extra="forbid")
+ 
+@@ -119,6 +121,16 @@ class Pretokenizer:
+             if self.config.enforce_inherited
+             else set()
+         )
++        self.grapheme_sets: dict[str, frozenset[str]] = {}
++        if self.config.enforce_grapheme:
++            props = dict(
++                ext="GCB=Extend", spm="GCB=SpacingMark", pre="GCB=Prepend",
++                hl="GCB=L", hv="GCB=V", ht="GCB=T",
++                lnk="InCB=Linker", ri="Regional_Indicator",
++            )
++            compiled = {k: re.compile(rf"\p{{{v}}}") for k, v in props.items()}
++            chars = unicode_script_map().keys()
++            self.grapheme_sets = {k: frozenset(c for c in chars if p.match(c)) for k, p in compiled.items()}
+ 
+     def _register_token(self, text) -> int:
+         self.atomic_tokens[self._next_token_id] = text
+@@ -142,6 +154,10 @@ class Pretokenizer:
+         h = hashlib.sha1()
+         config = self.config.model_copy(deep=True)
+         dumped = config.model_dump(mode="json", by_alias=True)
++        # keep hashes of pre-existing configs stable: drop grapheme fields when at defaults
++        if not dumped.get("enforce_grapheme", False):
++            dumped.pop("enforce_grapheme", None)
++            dumped.pop("grapheme_block_virama_end", None)
+         h.update(json.dumps(dumped, sort_keys=True).encode("utf-8"))
+         return "PT-" + h.hexdigest()[:8]
+ 
+@@ -216,6 +232,35 @@ class Pretokenizer:
+         """Return True if text does not start with an Inherited char."""
+         return len(text) > 1 and text[0] in self.inherited_chars
+ 
++    def violates_grapheme_policy(self, text: str) -> bool:
++        """Type-level grapheme-cluster rules: True if the token's decoded text starts or
++        ends inside a grapheme cluster in a way decidable from content alone.
++        Left edge (first non-space char, so space+mark tokens are covered):
++          L1 continuation mark (GCB Extend/SpacingMark) or ZWJ; L2 Hangul V/T jamo.
++        Right edge: R1 ZWJ; R2 virama/InCB=Linker (toggleable); R3 Prepend; R4 Hangul
++        L jamo; R5 odd count of Regional Indicators anywhere (a cut flag emoji).
++        Single-character tokens are always allowed (atomic assembly must stay possible)."""
++        if len(text) <= 1:
++            return False
++        g = self.grapheme_sets
++        stripped = text.lstrip()
++        if stripped:
++            c = stripped[0]
++            if c == "‍" or c in g["ext"] or c in g["spm"]:  # L1
++                return True
++            if c in g["hv"] or c in g["ht"]:  # L2
++                return True
++        last = text[-1]
++        if last == "‍":  # R1
++            return True
++        if self.config.grapheme_block_virama_end and last in g["lnk"]:  # R2
++            return True
++        if last in g["pre"] or last in g["hl"]:  # R3, R4
++            return True
++        if sum(1 for ch in text if ch in g["ri"]) % 2 == 1:  # R5
++            return True
++        return False
++
+     def token_allowed(self, token_seq: InputTokenSeq) -> bool:
+         # Strict decodable sequences are allowed unless they violate inherited-start policy
+         if self.config.enforce_char_boundaries:
+@@ -224,6 +269,8 @@ class Pretokenizer:
+                 return False
+             elif self.config.enforce_inherited and text is not None and self.violates_inherited_order(text):
+                 return False
++            elif self.config.enforce_grapheme and text is not None and self.violates_grapheme_policy(text):
++                return False
+         return True
+ 
+     def bpe_merge_allowed(self, a: InputTokenSeq, b: InputTokenSeq) -> bool:

@@ -1,0 +1,460 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>RQ2 — Where should the transitions go?</title>
+<style>
+  :root { color-scheme: light;
+    --page:#f9f9f7; --surface:#fcfcfb; --ink:#0b0b0b; --ink-2:#52514e;
+    --muted:#898781; --grid:#e1e0d9; --axis:#c3c2b7; --ring:rgba(11,11,11,0.10); }
+  * { box-sizing: border-box; margin: 0; }
+  body { background: var(--page); color: var(--ink);
+         font: 15px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif;
+         padding: 32px 20px 60px; }
+  .doc { max-width: 880px; margin: 0 auto; }
+  h1 { font-size: 26px; font-weight: 700; margin: 0 0 18px; line-height: 1.25; }
+  h2 { font-size: 19px; font-weight: 650; margin: 30px 0 10px; }
+  p { margin: 10px 0; }
+  ol { margin: 10px 0 10px 24px; }
+  li { margin: 6px 0; }
+  blockquote { background: var(--surface); border-left: 4px solid #2a78d6;
+               border-radius: 6px; padding: 14px 18px; margin: 16px 0; }
+  blockquote p { margin: 6px 0; }
+  hr { border: none; border-top: 1px solid var(--grid); margin: 28px 0 16px; }
+  code { background: rgba(11,11,11,0.05); border-radius: 4px; padding: 1px 5px;
+         font-size: 13px; }
+  .appx { color: var(--ink-2); font-size: 14px; }
+  table.menu { border-collapse: collapse; margin: 14px 0; font-size: 14px; }
+  table.menu th, table.menu td { border: 1px solid var(--grid); padding: 5px 12px;
+    text-align: left; }
+  table.menu td:nth-child(2), table.menu td:nth-child(3) { text-align: right;
+    font-variant-numeric: tabular-nums; }
+  table.menu th { background: rgba(11,11,11,0.035); font-weight: 650; }
+  .figblock { background: var(--surface); border: 1px solid var(--ring);
+              border-radius: 10px; padding: 14px 14px 8px; margin: 18px 0;
+              position: relative; }
+  .figblock figcaption { color: var(--ink-2); font-size: 13px; margin: 6px 6px 8px; }
+  .figblock .hint { color: var(--muted); }
+  .legend { display: flex; flex-wrap: wrap; gap: 12px; margin: 0 0 6px 6px; }
+  .legend .it { display: flex; align-items: center; gap: 6px; font-size: 12.5px;
+                color: var(--ink-2); }
+  .legend .key { width: 16px; height: 0; border-top: 3px solid; border-radius: 2px; }
+  .chart { outline: none; }
+  svg { width: 100%; height: auto; display: block; }
+  svg text { font: 11.5px system-ui, -apple-system, "Segoe UI", sans-serif;
+             font-variant-numeric: tabular-nums; }
+  .pt { font-size: 13px; color: var(--ink-2); font-weight: 600; margin: 4px 0 0 6px; }
+  .tip { position: absolute; pointer-events: none; display: none; z-index: 3;
+         background: var(--surface); border: 1px solid var(--ring); border-radius: 8px;
+         box-shadow: 0 4px 14px rgba(11,11,11,0.12); padding: 8px 12px; max-width: 300px; }
+  .tip .head { font-weight: 650; }
+  .tip .sub2 { color: var(--ink-2); font-size: 12px; margin-bottom: 5px; }
+  .tip .row { display: flex; align-items: baseline; gap: 7px; margin: 2px 0; }
+  .tip .key { width: 14px; height: 0; border-top: 3px solid; border-radius: 2px;
+              transform: translateY(-3px); flex: none; }
+  .tip .val { font-weight: 650; font-variant-numeric: tabular-nums; }
+  .tip .lbl { color: var(--ink-2); font-size: 12px; }
+  .tip .minor { color: var(--ink-2); font-size: 12px; margin-top: 5px; }
+  details { margin: 4px 6px 8px; }
+  summary { cursor: pointer; color: var(--muted); font-size: 12.5px; }
+  table:not(.menu) { border-collapse: collapse; margin-top: 8px; font-size: 12px;
+                     font-variant-numeric: tabular-nums; }
+  table:not(.menu) th, table:not(.menu) td { padding: 3px 9px; text-align: right;
+    border-bottom: 1px solid var(--grid); }
+  table:not(.menu) th:first-child, table:not(.menu) td:first-child { text-align: left; }
+  table:not(.menu) th { color: var(--ink-2); font-weight: 600; }
+</style></head>
+<body><div class="doc">
+
+<h1>Where should the transitions go? Results of RQ2</h1>
+
+<blockquote>
+<p><strong>We found that parity removes a roughly constant fraction of the remaining
+fairness gap as its budget increases — at 80k vocabulary, every additional
+quarter of the merge budget given to parity halves the gap that remains. How
+much budget that takes depends mainly on vocabulary size; languages, data,
+and training samples enter only through the tokenizer's measured starting
+disparity E. Compression, meanwhile, barely depends on either switch — it is
+set by vocabulary size: within the safe regions the transitions cost under
+1–2%, and a small parity ending actually <em>improves</em> compression, so training
+with no parity at all is strictly dominated.</strong></p>
+</blockquote>
+
+<p>That is the whole result. The rest of this page unpacks it into three answers,
+one table, and one procedure.</p>
+
+<h2>The question</h2>
+
+<p>A training run makes ~80,000 merge decisions and has two switches:
+<strong>t1</strong> = when merges may start crossing spaces (BPE → SuperBPE), and
+<strong>t2</strong> = when the objective changes from "most frequent overall" to "help the
+worst-compressed language" (classical → parity). Where should they go, and in
+what order? The answer came out in <strong>three different shapes</strong>.</p>
+
+<p>One thing to notice first: this is really <strong>two questions in one</strong>. Where the
+<em>safe regions</em> are is a question of fact, with one answer. But the exact
+placement of t2 is a question of <em>preference</em>, because t2 is the
+compression–fairness dial, <strong>t1 tells when it is safe to become SuperBPE;
+t2 tells how much fairness you want to get.</strong> So t1 gets an answer, and t2
+gets a menu plus a formula that turns a fairness target into a position.</p>
+
+
+<figure class="figblock" id="fb-anatomy">
+  <div class="chart" id="c-anatomy" tabindex="0" aria-label="interactive chart"></div>
+  <div class="tip" id="tip-anatomy"></div>
+  <figcaption><em>One 80k run, watched during training via truncation checkpoints. Each switch
+owns one metric: t1 (green) acts on compression (top panel) and is invisible to
+fairness; t2 (red) barely touches compression but triggers the disparity drop
+(bottom panel, 1.40 → 1.09). This single picture is the mechanism — the paper's
+Figure&nbsp;1 extended with the fairness panel it never had; everything below is
+about where to put the two dashed lines.</em><span class="hint"> — hover a dot for its full record; ←/→ steps, Esc clears.</span></figcaption>
+  <details><summary>data table</summary>
+    <div style="overflow-x:auto"><table id="t-anatomy"></table></div></details>
+</figure>
+
+<h2>Answer 1: t1 is a RANGE, but not really relevant</h2>
+
+<p>Anywhere in <strong>10–50% of the budget (the total number of merges the run gets to
+make)</strong> is within &lt;1% of the best compression, at every scale we measured
+(8k → 80k; the paper's own 200k curve agrees). Only the extremes hurt: before
+~1–2k merges the multi-byte characters aren't assembled yet; very late starves
+the superword phase. t1 does <strong>nothing</strong> for fairness. It is not a
+sensitive hyperparameter: pick 0.2·V and move on.</p>
+
+
+<figure class="figblock" id="fb-compass">
+  <div class="chart" id="c-compass" tabindex="0" aria-label="interactive chart"></div>
+  <div class="tip" id="tip-compass"></div>
+  <figcaption><em>Bytes/token vs t1, one line per vocabulary (8k–80k). The lines are nearly flat
+(total spread under 1% per curve) which is the finding: on this axis there is
+nothing to optimize. ★ (ringed dot) = best measured point per curve.</em><span class="hint"> — hover a dot for its full record; ←/→ steps, Esc clears.</span></figcaption>
+  <details><summary>data table</summary>
+    <div style="overflow-x:auto"><table id="t-compass"></table></div></details>
+</figure>
+
+<h2>Answer 2: ordering is a RULE (parity goes last)</h2>
+
+<p>Fairness has recency. In a budget-matched test at 80k (identical phase sizes,
+only the <em>position</em> of the parity block moved) placing parity in the middle and
+finishing classical <strong>erased the parity benefit completely</strong>: the final
+tokenizer was 99.95% merge-identical to one trained with no parity at all.
+Mechanism: early in a run, the two objectives pick nearly the same merges, and
+a classical finish re-derives whatever parity preempted; only at the <strong>end</strong> of
+a run does parity pick merges classical never would, and nothing comes after
+to undo them. <strong>Either way, it is better to finish on parity.</strong></p>
+
+<p>(This also settles the original BPE → parity → SuperBPE ordering: it stays a
+legitimate <em>compression-first</em> menu item (in the June runs it sat on the
+frontier's compressed end at every scale) but its middle parity block gets
+partially re-derived by the classical finish, so it cannot reach the fairness
+floor. Its strong June numbers came from its large parity share, one third of
+the budget, not from the ordering; a well-placed parity <em>ending</em> buys more
+fairness with a smaller share.)</p>
+
+<h2>Answer 3: t2 is a DIAL</h2>
+
+<p>Each t2 gives one tokenizer = one trade-off. The 80k menu (10 languages, FLORES;
+lower is better on both axes; plain BPE shown for scale):</p>
+
+<table class="menu">
+<tr><th>configuration</th><th>tokens/line</th><th>disparity</th><th>reading</th></tr>
+<tr><td>plain BPE (no superwords)</td><td>45.9</td><td>2.00</td><td>not in the race</td></tr>
+<tr><td>t2 = 1.00 — no parity</td><td>33.77</td><td>1.366</td><td><strong>dominated (do not do this)</strong></td></tr>
+<tr><td>t2 = 0.90 — last 10% parity</td><td><strong>33.66</strong></td><td>1.274</td><td><strong>compression optimum</strong></td></tr>
+<tr><td>t2 = 0.75 — last 25%</td><td>33.79</td><td>1.202</td><td>the ~1.20 landmark</td></tr>
+<tr><td>t2 = 0.60</td><td>34.14</td><td>1.148</td><td>balanced</td></tr>
+<tr><td>t2 = 0.45</td><td>34.47</td><td>1.085</td><td>near the fairness floor</td></tr>
+<tr><td>t2 = 0.30</td><td>34.69</td><td>1.075</td><td>paying a lot for very little</td></tr>
+</table>
+
+
+<figure class="figblock" id="fb-frontier80k">
+  <div class="chart" id="c-frontier80k" tabindex="0" aria-label="interactive chart"></div>
+  <div class="tip" id="tip-frontier80k"></div>
+  <figcaption><em>The same menu, drawn: each dot is one finished 80k tokenizer, labeled by its
+t2 in the tooltip. Down-left is better on both axes. Note the pale dot (t2 = 1.00,
+no parity) hanging off the frontier: dominated.</em><span class="hint"> — hover a dot for its full record; ←/→ steps, Esc clears.</span></figcaption>
+  <details><summary>data table</summary>
+    <div style="overflow-x:auto"><table id="t-frontier80k"></table></div></details>
+</figure>
+
+<p>Three rules of thumb, stable at every scale we tested (8k/20k/50k/80k):</p>
+
+<ol>
+<li><strong>Never 0% parity.</strong> Giving parity the last ~10% improves compression <em>and</em>
+fairness at once; the no-parity endpoint is strictly dominated (confirmed at
+4 scales, 3 language subsets, 3 data sizes, and an independent data draw).</li>
+<li><strong>Last ~25% of the budget → disparity ≈ 1.20</strong> at every vocabulary we
+measured (the "one half-life" point). A vocab-free landmark. (Two scale-trends
+cancel here: bigger vocabs start fairer but respond to parity more slowly; at
+80k this point is exactly one half-life.)</li>
+<li><strong>Last ~half → near the floor (~1.05)</strong>; beyond half is nearly pure cost.</li>
+</ol>
+
+
+<figure class="figblock" id="fb-dial">
+  <div class="chart" id="c-dial" tabindex="0" aria-label="interactive chart"></div>
+  <div class="tip" id="tip-dial"></div>
+  <figcaption><em>Disparity vs t2, one curve per vocabulary. In the working range (t2 ≈ 0.6–0.9)
+the four curves lie on top of each other — the dial is scale-invariant, which is
+what makes the rules of thumb portable. Only the extremes move with vocab.</em><span class="hint"> — hover a dot for its full record; ←/→ steps, Esc clears.</span></figcaption>
+  <details><summary>data table</summary>
+    <div style="overflow-x:auto"><table id="t-dial"></table></div></details>
+</figure>
+
+<h2>Using it on a new setting (the procedure)</h2>
+
+<p>Nothing extra needs to be trained to apply this:</p>
+
+<ol>
+<li>Train the classical spine (BPE → SuperBPE, t1 ≈ 0.2·V, no parity): it is
+needed anyway as phases 1–2 of the final tokenizer.</li>
+<li>Evaluate it → that disparity <strong>is E</strong>, the setting's starting unfairness.
+Languages, data size, and corpus draw all enter <em>only</em> through E.</li>
+<li>Choose a fairness target d, read off (or compute) the parity share b.</li>
+<li>Slice the spine at t2 = 1 − b (BPE is deterministic — a slice is a valid
+run) and train only the parity tail. The measurement costs nothing.</li>
+</ol>
+
+<h2>How much to trust it</h2>
+
+<p>~60 trained tokenizers across 4 vocab scales, 3 language subsets (3/6/10), and
+3 data sizes; the full 21-cell (t1, t2) grid at 8k plus production-scale checks
+at 80k show the two switches don't interact (the sliced design loses nothing);
+key results reproduce out-of-domain (NTREX news) and on an <strong>independent
+training-data draw</strong>; all headline deltas carry bootstrap CIs. One notable
+bonus: the parity region of the menu is nearly invariant to the training draw —
+parity absorbs data-sampling variance; only the no-parity baseline E moves.</p>
+
+<p>And the effect is visible in the tokens themselves, not just the curves: with a
+classical objective, ~62% of learned superwords are Latin-script; the parity
+phase redistributes them (Latin → ~29%, Cyrillic 13→38%, Devanagari 7→23%).
+Accordingly, the binding language changes: without parity the worst-treated
+language is Thai or Russian; at the fairness floor it becomes German, i.e. the
+weak scripts have been lifted until a high-resource European language is the
+constraint. That is what "parity" looks like up close.</p>
+
+
+<figure class="figblock" id="fb-interaction">
+  <div class="chart" id="c-interaction" tabindex="0" aria-label="interactive chart"></div>
+  <div class="tip" id="tip-interaction"></div>
+  <figcaption><em>The separability evidence, visually: disparity vs t2, one line per t1 setting,
+from the complete 21-combination grid. The lines lie on top of each other —
+where you drop the whitespace wall does not change what the parity dial does.
+This is what licenses sweeping the two switches independently.</em><span class="hint"> — hover a dot for its full record; ←/→ steps, Esc clears.</span></figcaption>
+  <details><summary>data table</summary>
+    <div style="overflow-x:auto"><table id="t-interaction"></table></div></details>
+</figure>
+
+<h2>Limits (volunteered up front)</h2>
+
+<p>~1 MB/language training data (curves may sharpen with more); intrinsic metrics
+only (no downstream LM); the vocab-scaling of the dial is fitted on 8k–80k —
+using it at 150k+ is an extrapolation with one falsifiable prediction on record
+(τ(150k) ≈ 0.39), testable when cluster/Rust compute is available.</p>
+
+<hr>
+
+<p class="appx"><em>Appendix, one line:</em> the dial is disparity(b) = 1.02 + (E − 1.02)·e<sup>−b/τ</sup>,
+τ(V) = 0.037·log₂V − 0.25, with b = 1 − t2; fitted on 8k/20k/50k it predicts the
+held-out 80k frontier with RMSE 0.010. Details: <code>rung2_synthesis.md</code> §8,
+<code>transition_findings.md</code>.</p>
+
+</div>
+<script>
+"use strict";
+const SPECS = {"anatomy": {"panels": [{"title": "", "ylabel": "bytes / token  (\u2191 better)", "xlabel": "", "h": 300, "bands": [{"x0": 0, "x1": 20000, "label": "BPE", "fill": "rgba(11,11,11,0.035)", "label_pos": "top"}, {"x0": 20000, "x1": 35900, "label": "classical super", "fill": "transparent", "label_pos": "top"}, {"x0": 35900, "x1": 79744, "label": "parity super", "fill": "rgba(74,58,167,0.055)", "label_pos": "top"}], "vrules": [{"x": 20000, "color": "#008300", "label": "t1: wall drops"}, {"x": 35900, "color": "#e34948", "label": "t2: parity on"}], "vrule_labels": true, "band_labels": true, "series": [{"name": null, "color": "#2a78d6", "pts": [{"x": 1000, "y": 2.2987, "d": {"head": "merge 1,000  (vocab 1,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "2.2987", "bytes / token"], ["#4a3aa7", "1.6283", "disparity worst/best"]], "minor": "85.85 tok/line \u00b7 gini 0.0751 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 2000, "y": 2.6782, "d": {"head": "merge 2,000  (vocab 2,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "2.6782", "bytes / token"], ["#4a3aa7", "1.5601", "disparity worst/best"]], "minor": "73.58 tok/line \u00b7 gini 0.0714 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 4000, "y": 3.1111, "d": {"head": "merge 4,000  (vocab 4,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.1111", "bytes / token"], ["#4a3aa7", "1.4845", "disparity worst/best"]], "minor": "63.29 tok/line \u00b7 gini 0.0736 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 8000, "y": 3.6213, "d": {"head": "merge 8,000  (vocab 8,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.6213", "bytes / token"], ["#4a3aa7", "1.4755", "disparity worst/best"]], "minor": "54.42 tok/line \u00b7 gini 0.0728 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 12000, "y": 3.9343, "d": {"head": "merge 12,000  (vocab 12,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.9343", "bytes / token"], ["#4a3aa7", "1.4364", "disparity worst/best"]], "minor": "50.16 tok/line \u00b7 gini 0.0691 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 16000, "y": 4.1632, "d": {"head": "merge 16,000  (vocab 16,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.1632", "bytes / token"], ["#4a3aa7", "1.4126", "disparity worst/best"]], "minor": "47.44 tok/line \u00b7 gini 0.0671 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 19000, "y": 4.3126, "d": {"head": "merge 19,000  (vocab 19,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.3126", "bytes / token"], ["#4a3aa7", "1.4010", "disparity worst/best"]], "minor": "45.83 tok/line \u00b7 gini 0.0648 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 20000, "y": 4.3512, "d": {"head": "merge 20,000  (vocab 20,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.3512", "bytes / token"], ["#4a3aa7", "1.4087", "disparity worst/best"]], "minor": "45.43 tok/line \u00b7 gini 0.0652 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 20500, "y": 4.4517, "d": {"head": "merge 20,500  (vocab 20,756)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.4517", "bytes / token"], ["#4a3aa7", "1.4205", "disparity worst/best"]], "minor": "44.34 tok/line \u00b7 gini 0.0692 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 21000, "y": 4.4876, "d": {"head": "merge 21,000  (vocab 21,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.4876", "bytes / token"], ["#4a3aa7", "1.4317", "disparity worst/best"]], "minor": "43.98 tok/line \u00b7 gini 0.0704 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 22000, "y": 4.5389, "d": {"head": "merge 22,000  (vocab 22,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.5389", "bytes / token"], ["#4a3aa7", "1.4484", "disparity worst/best"]], "minor": "43.47 tok/line \u00b7 gini 0.0721 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 24000, "y": 4.6389, "d": {"head": "merge 24,000  (vocab 24,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.6389", "bytes / token"], ["#4a3aa7", "1.4464", "disparity worst/best"]], "minor": "42.56 tok/line \u00b7 gini 0.0713 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 28000, "y": 4.7994, "d": {"head": "merge 28,000  (vocab 28,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.7994", "bytes / token"], ["#4a3aa7", "1.4339", "disparity worst/best"]], "minor": "41.14 tok/line \u00b7 gini 0.0704 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 32000, "y": 4.9416, "d": {"head": "merge 32,000  (vocab 32,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.9416", "bytes / token"], ["#4a3aa7", "1.4183", "disparity worst/best"]], "minor": "39.99 tok/line \u00b7 gini 0.0687 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 34900, "y": 5.0344, "d": {"head": "merge 34,900  (vocab 35,156)", "sub": "phase: classical-super", "lines": [["#2a78d6", "5.0344", "bytes / token"], ["#4a3aa7", "1.4091", "disparity worst/best"]], "minor": "39.25 tok/line \u00b7 gini 0.0683 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 35900, "y": 5.0609, "d": {"head": "merge 35,900  (vocab 36,156)", "sub": "phase: classical-super", "lines": [["#2a78d6", "5.0609", "bytes / token"], ["#4a3aa7", "1.4050", "disparity worst/best"]], "minor": "39.05 tok/line \u00b7 gini 0.0678 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 36000, "y": 5.0689, "d": {"head": "merge 36,000  (vocab 36,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.0689", "bytes / token"], ["#4a3aa7", "1.3906", "disparity worst/best"]], "minor": "39.00 tok/line \u00b7 gini 0.0668 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 36400, "y": 5.0947, "d": {"head": "merge 36,400  (vocab 36,656)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.0947", "bytes / token"], ["#4a3aa7", "1.3816", "disparity worst/best"]], "minor": "38.85 tok/line \u00b7 gini 0.0641 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 36900, "y": 5.1164, "d": {"head": "merge 36,900  (vocab 37,156)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.1164", "bytes / token"], ["#4a3aa7", "1.3611", "disparity worst/best"]], "minor": "38.71 tok/line \u00b7 gini 0.0615 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 37900, "y": 5.1565, "d": {"head": "merge 37,900  (vocab 38,156)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.1565", "bytes / token"], ["#4a3aa7", "1.3246", "disparity worst/best"]], "minor": "38.46 tok/line \u00b7 gini 0.0570 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 40000, "y": 5.2378, "d": {"head": "merge 40,000  (vocab 40,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.2378", "bytes / token"], ["#4a3aa7", "1.2744", "disparity worst/best"]], "minor": "38.00 tok/line \u00b7 gini 0.0493 \u00b7 worst hin_Deva \u00b7 best zho_Hans"}}, {"x": 44000, "y": 5.3599, "d": {"head": "merge 44,000  (vocab 44,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.3599", "bytes / token"], ["#4a3aa7", "1.2181", "disparity worst/best"]], "minor": "37.34 tok/line \u00b7 gini 0.0402 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 48000, "y": 5.4575, "d": {"head": "merge 48,000  (vocab 48,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.4575", "bytes / token"], ["#4a3aa7", "1.1983", "disparity worst/best"]], "minor": "36.79 tok/line \u00b7 gini 0.0340 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 52000, "y": 5.5454, "d": {"head": "merge 52,000  (vocab 52,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.5454", "bytes / token"], ["#4a3aa7", "1.1725", "disparity worst/best"]], "minor": "36.31 tok/line \u00b7 gini 0.0280 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 56000, "y": 5.6135, "d": {"head": "merge 56,000  (vocab 56,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.6135", "bytes / token"], ["#4a3aa7", "1.1483", "disparity worst/best"]], "minor": "35.95 tok/line \u00b7 gini 0.0232 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 60000, "y": 5.6757, "d": {"head": "merge 60,000  (vocab 60,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.6757", "bytes / token"], ["#4a3aa7", "1.1302", "disparity worst/best"]], "minor": "35.63 tok/line \u00b7 gini 0.0201 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 64000, "y": 5.7279, "d": {"head": "merge 64,000  (vocab 64,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.7279", "bytes / token"], ["#4a3aa7", "1.1163", "disparity worst/best"]], "minor": "35.35 tok/line \u00b7 gini 0.0183 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 68000, "y": 5.7591, "d": {"head": "merge 68,000  (vocab 68,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.7591", "bytes / token"], ["#4a3aa7", "1.1114", "disparity worst/best"]], "minor": "35.18 tok/line \u00b7 gini 0.0177 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 72000, "y": 5.8009, "d": {"head": "merge 72,000  (vocab 72,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8009", "bytes / token"], ["#4a3aa7", "1.1011", "disparity worst/best"]], "minor": "34.95 tok/line \u00b7 gini 0.0166 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 76000, "y": 5.841, "d": {"head": "merge 76,000  (vocab 76,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8410", "bytes / token"], ["#4a3aa7", "1.0934", "disparity worst/best"]], "minor": "34.72 tok/line \u00b7 gini 0.0156 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 79744, "y": 5.8871, "d": {"head": "merge 79,744  (vocab 80,000)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8871", "bytes / token"], ["#4a3aa7", "1.0852", "disparity worst/best"]], "minor": "34.47 tok/line \u00b7 gini 0.0145 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}]}]}, {"title": "", "ylabel": "disparity worst/best  (\u2193 fairer)", "xlabel": "merge number", "h": 300, "bands": [{"x0": 0, "x1": 20000, "label": "BPE", "fill": "rgba(11,11,11,0.035)", "label_pos": "top"}, {"x0": 20000, "x1": 35900, "label": "classical super", "fill": "transparent", "label_pos": "top"}, {"x0": 35900, "x1": 79744, "label": "parity super", "fill": "rgba(74,58,167,0.055)", "label_pos": "top"}], "vrules": [{"x": 20000, "color": "#008300", "label": "t1: wall drops"}, {"x": 35900, "color": "#e34948", "label": "t2: parity on"}], "vrule_labels": false, "band_labels": false, "series": [{"name": null, "color": "#4a3aa7", "pts": [{"x": 1000, "y": 1.6283, "d": {"head": "merge 1,000  (vocab 1,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "2.2987", "bytes / token"], ["#4a3aa7", "1.6283", "disparity worst/best"]], "minor": "85.85 tok/line \u00b7 gini 0.0751 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 2000, "y": 1.5601, "d": {"head": "merge 2,000  (vocab 2,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "2.6782", "bytes / token"], ["#4a3aa7", "1.5601", "disparity worst/best"]], "minor": "73.58 tok/line \u00b7 gini 0.0714 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 4000, "y": 1.4845, "d": {"head": "merge 4,000  (vocab 4,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.1111", "bytes / token"], ["#4a3aa7", "1.4845", "disparity worst/best"]], "minor": "63.29 tok/line \u00b7 gini 0.0736 \u00b7 worst tha_Thai \u00b7 best eng_Latn"}}, {"x": 8000, "y": 1.4755, "d": {"head": "merge 8,000  (vocab 8,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.6213", "bytes / token"], ["#4a3aa7", "1.4755", "disparity worst/best"]], "minor": "54.42 tok/line \u00b7 gini 0.0728 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 12000, "y": 1.4364, "d": {"head": "merge 12,000  (vocab 12,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "3.9343", "bytes / token"], ["#4a3aa7", "1.4364", "disparity worst/best"]], "minor": "50.16 tok/line \u00b7 gini 0.0691 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 16000, "y": 1.4126, "d": {"head": "merge 16,000  (vocab 16,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.1632", "bytes / token"], ["#4a3aa7", "1.4126", "disparity worst/best"]], "minor": "47.44 tok/line \u00b7 gini 0.0671 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 19000, "y": 1.401, "d": {"head": "merge 19,000  (vocab 19,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.3126", "bytes / token"], ["#4a3aa7", "1.4010", "disparity worst/best"]], "minor": "45.83 tok/line \u00b7 gini 0.0648 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 20000, "y": 1.4087, "d": {"head": "merge 20,000  (vocab 20,256)", "sub": "phase: bpe", "lines": [["#2a78d6", "4.3512", "bytes / token"], ["#4a3aa7", "1.4087", "disparity worst/best"]], "minor": "45.43 tok/line \u00b7 gini 0.0652 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 20500, "y": 1.4205, "d": {"head": "merge 20,500  (vocab 20,756)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.4517", "bytes / token"], ["#4a3aa7", "1.4205", "disparity worst/best"]], "minor": "44.34 tok/line \u00b7 gini 0.0692 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 21000, "y": 1.4317, "d": {"head": "merge 21,000  (vocab 21,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.4876", "bytes / token"], ["#4a3aa7", "1.4317", "disparity worst/best"]], "minor": "43.98 tok/line \u00b7 gini 0.0704 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 22000, "y": 1.4484, "d": {"head": "merge 22,000  (vocab 22,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.5389", "bytes / token"], ["#4a3aa7", "1.4484", "disparity worst/best"]], "minor": "43.47 tok/line \u00b7 gini 0.0721 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 24000, "y": 1.4464, "d": {"head": "merge 24,000  (vocab 24,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.6389", "bytes / token"], ["#4a3aa7", "1.4464", "disparity worst/best"]], "minor": "42.56 tok/line \u00b7 gini 0.0713 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 28000, "y": 1.4339, "d": {"head": "merge 28,000  (vocab 28,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.7994", "bytes / token"], ["#4a3aa7", "1.4339", "disparity worst/best"]], "minor": "41.14 tok/line \u00b7 gini 0.0704 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 32000, "y": 1.4183, "d": {"head": "merge 32,000  (vocab 32,256)", "sub": "phase: classical-super", "lines": [["#2a78d6", "4.9416", "bytes / token"], ["#4a3aa7", "1.4183", "disparity worst/best"]], "minor": "39.99 tok/line \u00b7 gini 0.0687 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 34900, "y": 1.4091, "d": {"head": "merge 34,900  (vocab 35,156)", "sub": "phase: classical-super", "lines": [["#2a78d6", "5.0344", "bytes / token"], ["#4a3aa7", "1.4091", "disparity worst/best"]], "minor": "39.25 tok/line \u00b7 gini 0.0683 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 35900, "y": 1.405, "d": {"head": "merge 35,900  (vocab 36,156)", "sub": "phase: classical-super", "lines": [["#2a78d6", "5.0609", "bytes / token"], ["#4a3aa7", "1.4050", "disparity worst/best"]], "minor": "39.05 tok/line \u00b7 gini 0.0678 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 36000, "y": 1.3906, "d": {"head": "merge 36,000  (vocab 36,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.0689", "bytes / token"], ["#4a3aa7", "1.3906", "disparity worst/best"]], "minor": "39.00 tok/line \u00b7 gini 0.0668 \u00b7 worst tha_Thai \u00b7 best zho_Hans"}}, {"x": 36400, "y": 1.3816, "d": {"head": "merge 36,400  (vocab 36,656)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.0947", "bytes / token"], ["#4a3aa7", "1.3816", "disparity worst/best"]], "minor": "38.85 tok/line \u00b7 gini 0.0641 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 36900, "y": 1.3611, "d": {"head": "merge 36,900  (vocab 37,156)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.1164", "bytes / token"], ["#4a3aa7", "1.3611", "disparity worst/best"]], "minor": "38.71 tok/line \u00b7 gini 0.0615 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 37900, "y": 1.3246, "d": {"head": "merge 37,900  (vocab 38,156)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.1565", "bytes / token"], ["#4a3aa7", "1.3246", "disparity worst/best"]], "minor": "38.46 tok/line \u00b7 gini 0.0570 \u00b7 worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 40000, "y": 1.2744, "d": {"head": "merge 40,000  (vocab 40,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.2378", "bytes / token"], ["#4a3aa7", "1.2744", "disparity worst/best"]], "minor": "38.00 tok/line \u00b7 gini 0.0493 \u00b7 worst hin_Deva \u00b7 best zho_Hans"}}, {"x": 44000, "y": 1.2181, "d": {"head": "merge 44,000  (vocab 44,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.3599", "bytes / token"], ["#4a3aa7", "1.2181", "disparity worst/best"]], "minor": "37.34 tok/line \u00b7 gini 0.0402 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 48000, "y": 1.1983, "d": {"head": "merge 48,000  (vocab 48,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.4575", "bytes / token"], ["#4a3aa7", "1.1983", "disparity worst/best"]], "minor": "36.79 tok/line \u00b7 gini 0.0340 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 52000, "y": 1.1725, "d": {"head": "merge 52,000  (vocab 52,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.5454", "bytes / token"], ["#4a3aa7", "1.1725", "disparity worst/best"]], "minor": "36.31 tok/line \u00b7 gini 0.0280 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 56000, "y": 1.1483, "d": {"head": "merge 56,000  (vocab 56,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.6135", "bytes / token"], ["#4a3aa7", "1.1483", "disparity worst/best"]], "minor": "35.95 tok/line \u00b7 gini 0.0232 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 60000, "y": 1.1302, "d": {"head": "merge 60,000  (vocab 60,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.6757", "bytes / token"], ["#4a3aa7", "1.1302", "disparity worst/best"]], "minor": "35.63 tok/line \u00b7 gini 0.0201 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 64000, "y": 1.1163, "d": {"head": "merge 64,000  (vocab 64,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.7279", "bytes / token"], ["#4a3aa7", "1.1163", "disparity worst/best"]], "minor": "35.35 tok/line \u00b7 gini 0.0183 \u00b7 worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 68000, "y": 1.1114, "d": {"head": "merge 68,000  (vocab 68,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.7591", "bytes / token"], ["#4a3aa7", "1.1114", "disparity worst/best"]], "minor": "35.18 tok/line \u00b7 gini 0.0177 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 72000, "y": 1.1011, "d": {"head": "merge 72,000  (vocab 72,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8009", "bytes / token"], ["#4a3aa7", "1.1011", "disparity worst/best"]], "minor": "34.95 tok/line \u00b7 gini 0.0166 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 76000, "y": 1.0934, "d": {"head": "merge 76,000  (vocab 76,256)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8410", "bytes / token"], ["#4a3aa7", "1.0934", "disparity worst/best"]], "minor": "34.72 tok/line \u00b7 gini 0.0156 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 79744, "y": 1.0852, "d": {"head": "merge 79,744  (vocab 80,000)", "sub": "phase: parity-super", "lines": [["#2a78d6", "5.8871", "bytes / token"], ["#4a3aa7", "1.0852", "disparity worst/best"]], "minor": "34.47 tok/line \u00b7 gini 0.0145 \u00b7 worst deu_Latn \u00b7 best eng_Latn"}}]}]}], "table": {"cols": ["merges", "vocab", "phase", "bytes/tok", "tok/line", "disparity", "gini", "worst", "best"], "rows": [["1,000", "1,256", "bpe", "2.2987", "85.85", "1.6283", "0.0751", "tha_Thai", "eng_Latn"], ["2,000", "2,256", "bpe", "2.6782", "73.58", "1.5601", "0.0714", "tha_Thai", "eng_Latn"], ["4,000", "4,256", "bpe", "3.1111", "63.29", "1.4845", "0.0736", "tha_Thai", "eng_Latn"], ["8,000", "8,256", "bpe", "3.6213", "54.42", "1.4755", "0.0728", "tha_Thai", "zho_Hans"], ["12,000", "12,256", "bpe", "3.9343", "50.16", "1.4364", "0.0691", "tha_Thai", "zho_Hans"], ["16,000", "16,256", "bpe", "4.1632", "47.44", "1.4126", "0.0671", "rus_Cyrl", "zho_Hans"], ["19,000", "19,256", "bpe", "4.3126", "45.83", "1.4010", "0.0648", "rus_Cyrl", "zho_Hans"], ["20,000", "20,256", "bpe", "4.3512", "45.43", "1.4087", "0.0652", "rus_Cyrl", "zho_Hans"], ["20,500", "20,756", "classical-super", "4.4517", "44.34", "1.4205", "0.0692", "tha_Thai", "zho_Hans"], ["21,000", "21,256", "classical-super", "4.4876", "43.98", "1.4317", "0.0704", "tha_Thai", "zho_Hans"], ["22,000", "22,256", "classical-super", "4.5389", "43.47", "1.4484", "0.0721", "tha_Thai", "zho_Hans"], ["24,000", "24,256", "classical-super", "4.6389", "42.56", "1.4464", "0.0713", "tha_Thai", "zho_Hans"], ["28,000", "28,256", "classical-super", "4.7994", "41.14", "1.4339", "0.0704", "tha_Thai", "zho_Hans"], ["32,000", "32,256", "classical-super", "4.9416", "39.99", "1.4183", "0.0687", "tha_Thai", "zho_Hans"], ["34,900", "35,156", "classical-super", "5.0344", "39.25", "1.4091", "0.0683", "tha_Thai", "zho_Hans"], ["35,900", "36,156", "classical-super", "5.0609", "39.05", "1.4050", "0.0678", "tha_Thai", "zho_Hans"], ["36,000", "36,256", "parity-super", "5.0689", "39.00", "1.3906", "0.0668", "tha_Thai", "zho_Hans"], ["36,400", "36,656", "parity-super", "5.0947", "38.85", "1.3816", "0.0641", "rus_Cyrl", "zho_Hans"], ["36,900", "37,156", "parity-super", "5.1164", "38.71", "1.3611", "0.0615", "rus_Cyrl", "zho_Hans"], ["37,900", "38,156", "parity-super", "5.1565", "38.46", "1.3246", "0.0570", "rus_Cyrl", "zho_Hans"], ["40,000", "40,256", "parity-super", "5.2378", "38.00", "1.2744", "0.0493", "hin_Deva", "zho_Hans"], ["44,000", "44,256", "parity-super", "5.3599", "37.34", "1.2181", "0.0402", "deu_Latn", "zho_Hans"], ["48,000", "48,256", "parity-super", "5.4575", "36.79", "1.1983", "0.0340", "deu_Latn", "zho_Hans"], ["52,000", "52,256", "parity-super", "5.5454", "36.31", "1.1725", "0.0280", "deu_Latn", "zho_Hans"], ["56,000", "56,256", "parity-super", "5.6135", "35.95", "1.1483", "0.0232", "deu_Latn", "zho_Hans"], ["60,000", "60,256", "parity-super", "5.6757", "35.63", "1.1302", "0.0201", "deu_Latn", "zho_Hans"], ["64,000", "64,256", "parity-super", "5.7279", "35.35", "1.1163", "0.0183", "deu_Latn", "zho_Hans"], ["68,000", "68,256", "parity-super", "5.7591", "35.18", "1.1114", "0.0177", "deu_Latn", "eng_Latn"], ["72,000", "72,256", "parity-super", "5.8009", "34.95", "1.1011", "0.0166", "deu_Latn", "eng_Latn"], ["76,000", "76,256", "parity-super", "5.8410", "34.72", "1.0934", "0.0156", "deu_Latn", "eng_Latn"], ["79,744", "80,000", "parity-super", "5.8871", "34.47", "1.0852", "0.0145", "deu_Latn", "eng_Latn"]]}}, "compass": {"panels": [{"title": "bytes / token vs t1 fraction \u2014 one line per vocab", "xlabel": "t1 (fraction of merge budget, sub\u2192super)", "ylabel": "bytes / token  (\u2191 better)", "xdom": [0, 1.02], "bands": [{"x0": 0.3, "x1": 0.4, "label": "SuperBPE paper peak (200k)"}], "series": [{"name": "scaling run (fixed head, 2 MB data \u2014 context)", "color": "#898781", "dash": true, "pts": [{"x": 0.244, "y": 4.9791, "d": {"head": "scaling context \u2014 vocab 32k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.9791", "bytes / token"]], "minor": ""}}, {"x": 0.2791, "y": 4.8404, "d": {"head": "scaling context \u2014 vocab 28k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.8404", "bytes / token"]], "minor": ""}}, {"x": 0.3261, "y": 4.676, "d": {"head": "scaling context \u2014 vocab 24k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.6760", "bytes / token"]], "minor": ""}}, {"x": 0.3922, "y": 4.4903, "d": {"head": "scaling context \u2014 vocab 20k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.4903", "bytes / token"]], "minor": ""}}, {"x": 0.4919, "y": 4.2738, "d": {"head": "scaling context \u2014 vocab 16k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.2738", "bytes / token"]], "minor": ""}}, {"x": 0.6594, "y": 4.0061, "d": {"head": "scaling context \u2014 vocab 12k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "4.0061", "bytes / token"]], "minor": ""}}, {"x": 1.0, "y": 3.5986, "d": {"head": "scaling context \u2014 vocab 8k", "sub": "fixed 7,744-merge head, 2 MB data \u2014 not comparable to the 1 MB curves", "lines": [["#898781", "3.5986", "bytes / token"]], "minor": ""}}]}, {"name": "vocab 8k", "color": "#2a78d6", "end_label": "8k", "star": 4, "pts": [{"x": 0.0517, "y": 3.6419, "d": {"head": "vocab 8k \u2014 t1 = 400 (frac 0.052)", "sub": "", "lines": [["#2a78d6", "3.6419", "bytes / token"], ["#898781", "54.03", "tokens / line"], ["#898781", "1.530", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: fig2_8k"}}, {"x": 0.1033, "y": 3.6665, "d": {"head": "vocab 8k \u2014 t1 = 800 (frac 0.103)", "sub": "", "lines": [["#2a78d6", "3.6665", "bytes / token"], ["#898781", "53.73", "tokens / line"], ["#898781", "1.531", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: fig2_8k"}}, {"x": 0.155, "y": 3.6672, "d": {"head": "vocab 8k \u2014 t1 = 1,200 (frac 0.155)", "sub": "", "lines": [["#2a78d6", "3.6672", "bytes / token"], ["#898781", "53.72", "tokens / line"], ["#898781", "1.532", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: fig2_8k"}}, {"x": 0.2066, "y": 3.6673, "d": {"head": "vocab 8k \u2014 t1 = 1,600 (frac 0.207)", "sub": "", "lines": [["#2a78d6", "3.6673", "bytes / token"], ["#898781", "53.72", "tokens / line"], ["#898781", "1.530", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: fig2_8k"}}, {"x": 0.2583, "y": 3.6682, "d": {"head": "vocab 8k \u2014 t1 = 2,000 (frac 0.258)", "sub": "best measured on this curve", "lines": [["#2a78d6", "3.6682", "bytes / token"], ["#898781", "53.70", "tokens / line"], ["#898781", "1.529", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: explore_8k"}}, {"x": 0.5165, "y": 3.6612, "d": {"head": "vocab 8k \u2014 t1 = 4,000 (frac 0.516)", "sub": "", "lines": [["#2a78d6", "3.6612", "bytes / token"], ["#898781", "53.81", "tokens / line"], ["#898781", "1.531", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: explore_8k"}}, {"x": 0.7748, "y": 3.6484, "d": {"head": "vocab 8k \u2014 t1 = 6,000 (frac 0.775)", "sub": "", "lines": [["#2a78d6", "3.6484", "bytes / token"], ["#898781", "53.99", "tokens / line"], ["#898781", "1.533", "disparity (flat in t1)"]], "minor": "curve spread 0.72% \u00b7 source: explore_8k"}}]}, {"name": "vocab 12k", "color": "#eb6834", "end_label": "12k", "star": 4, "pts": [{"x": 0.0851, "y": 4.0112, "d": {"head": "vocab 12k \u2014 t1 = 1,000 (frac 0.085)", "sub": "", "lines": [["#eb6834", "4.0112", "bytes / token"], ["#898781", "49.16", "tokens / line"], ["#898781", "1.491", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}, {"x": 0.1277, "y": 4.0152, "d": {"head": "vocab 12k \u2014 t1 = 1,500 (frac 0.128)", "sub": "", "lines": [["#eb6834", "4.0152", "bytes / token"], ["#898781", "49.10", "tokens / line"], ["#898781", "1.491", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}, {"x": 0.1703, "y": 4.0158, "d": {"head": "vocab 12k \u2014 t1 = 2,000 (frac 0.170)", "sub": "", "lines": [["#eb6834", "4.0158", "bytes / token"], ["#898781", "49.10", "tokens / line"], ["#898781", "1.485", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}, {"x": 0.2129, "y": 4.0152, "d": {"head": "vocab 12k \u2014 t1 = 2,500 (frac 0.213)", "sub": "", "lines": [["#eb6834", "4.0152", "bytes / token"], ["#898781", "49.10", "tokens / line"], ["#898781", "1.485", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}, {"x": 0.2554, "y": 4.0159, "d": {"head": "vocab 12k \u2014 t1 = 3,000 (frac 0.255)", "sub": "best measured on this curve", "lines": [["#eb6834", "4.0159", "bytes / token"], ["#898781", "49.10", "tokens / line"], ["#898781", "1.484", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}, {"x": 0.5109, "y": 4.0074, "d": {"head": "vocab 12k \u2014 t1 = 6,000 (frac 0.511)", "sub": "", "lines": [["#eb6834", "4.0074", "bytes / token"], ["#898781", "49.19", "tokens / line"], ["#898781", "1.490", "disparity (flat in t1)"]], "minor": "curve spread 0.21% \u00b7 source: fig2_trunc"}}]}, {"name": "vocab 20k", "color": "#1baf7a", "end_label": "20k", "star": 2, "pts": [{"x": 0.0506, "y": 4.473, "d": {"head": "vocab 20k \u2014 t1 = 1,000 (frac 0.051)", "sub": "", "lines": [["#1baf7a", "4.4730", "bytes / token"], ["#898781", "44.15", "tokens / line"], ["#898781", "1.452", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k"}}, {"x": 0.076, "y": 4.4779, "d": {"head": "vocab 20k \u2014 t1 = 1,500 (frac 0.076)", "sub": "", "lines": [["#1baf7a", "4.4779", "bytes / token"], ["#898781", "44.09", "tokens / line"], ["#898781", "1.451", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k"}}, {"x": 0.1013, "y": 4.4792, "d": {"head": "vocab 20k \u2014 t1 = 2,000 (frac 0.101)", "sub": "best measured on this curve", "lines": [["#1baf7a", "4.4792", "bytes / token"], ["#898781", "44.08", "tokens / line"], ["#898781", "1.452", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k"}}, {"x": 0.1266, "y": 4.4762, "d": {"head": "vocab 20k \u2014 t1 = 2,500 (frac 0.127)", "sub": "", "lines": [["#1baf7a", "4.4762", "bytes / token"], ["#898781", "44.11", "tokens / line"], ["#898781", "1.452", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k"}}, {"x": 0.1519, "y": 4.4779, "d": {"head": "vocab 20k \u2014 t1 = 3,000 (frac 0.152)", "sub": "", "lines": [["#1baf7a", "4.4779", "bytes / token"], ["#898781", "44.09", "tokens / line"], ["#898781", "1.451", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k"}}, {"x": 0.2026, "y": 4.4773, "d": {"head": "vocab 20k \u2014 t1 = 4,000 (frac 0.203)", "sub": "", "lines": [["#1baf7a", "4.4773", "bytes / token"], ["#898781", "44.10", "tokens / line"], ["#898781", "1.451", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: explore_20k"}}, {"x": 0.25, "y": 4.4754, "d": {"head": "vocab 20k \u2014 t1 = 4,936 (frac 0.250)", "sub": "", "lines": [["#1baf7a", "4.4754", "bytes / token"], ["#898781", "44.12", "tokens / line"], ["#898781", "1.451", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: fig2_20k_t25"}}, {"x": 0.4052, "y": 4.4743, "d": {"head": "vocab 20k \u2014 t1 = 8,000 (frac 0.405)", "sub": "", "lines": [["#1baf7a", "4.4743", "bytes / token"], ["#898781", "44.12", "tokens / line"], ["#898781", "1.450", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: explore_20k"}}, {"x": 0.6078, "y": 4.4672, "d": {"head": "vocab 20k \u2014 t1 = 12,000 (frac 0.608)", "sub": "", "lines": [["#1baf7a", "4.4672", "bytes / token"], ["#898781", "44.18", "tokens / line"], ["#898781", "1.453", "disparity (flat in t1)"]], "minor": "curve spread 0.27% \u00b7 source: explore_20k"}}]}, {"name": "vocab 30k", "color": "#eda100", "end_label": "30k", "star": 2, "pts": [{"x": 0.0504, "y": 4.8737, "d": {"head": "vocab 30k \u2014 t1 = 1,500 (frac 0.050)", "sub": "", "lines": [["#eda100", "4.8737", "bytes / token"], ["#898781", "40.55", "tokens / line"], ["#898781", "1.421", "disparity (flat in t1)"]], "minor": "curve spread 0.07% \u00b7 source: fig2_trunc"}}, {"x": 0.1009, "y": 4.8749, "d": {"head": "vocab 30k \u2014 t1 = 3,000 (frac 0.101)", "sub": "", "lines": [["#eda100", "4.8749", "bytes / token"], ["#898781", "40.55", "tokens / line"], ["#898781", "1.418", "disparity (flat in t1)"]], "minor": "curve spread 0.07% \u00b7 source: fig2_trunc"}}, {"x": 0.2017, "y": 4.8772, "d": {"head": "vocab 30k \u2014 t1 = 6,000 (frac 0.202)", "sub": "best measured on this curve", "lines": [["#eda100", "4.8772", "bytes / token"], ["#898781", "40.52", "tokens / line"], ["#898781", "1.418", "disparity (flat in t1)"]], "minor": "curve spread 0.07% \u00b7 source: fig2_trunc"}}, {"x": 0.4034, "y": 4.8765, "d": {"head": "vocab 30k \u2014 t1 = 12,000 (frac 0.403)", "sub": "", "lines": [["#eda100", "4.8765", "bytes / token"], ["#898781", "40.51", "tokens / line"], ["#898781", "1.420", "disparity (flat in t1)"]], "minor": "curve spread 0.07% \u00b7 source: fig2_trunc"}}]}, {"name": "vocab 40k", "color": "#e87ba4", "end_label": "40k", "star": 3, "pts": [{"x": 0.0377, "y": 5.1632, "d": {"head": "vocab 40k \u2014 t1 = 1,500 (frac 0.038)", "sub": "", "lines": [["#e87ba4", "5.1632", "bytes / token"], ["#898781", "38.31", "tokens / line"], ["#898781", "1.393", "disparity (flat in t1)"]], "minor": "curve spread 0.19% \u00b7 source: fig2_trunc"}}, {"x": 0.0755, "y": 5.1656, "d": {"head": "vocab 40k \u2014 t1 = 3,000 (frac 0.075)", "sub": "", "lines": [["#e87ba4", "5.1656", "bytes / token"], ["#898781", "38.30", "tokens / line"], ["#898781", "1.389", "disparity (flat in t1)"]], "minor": "curve spread 0.19% \u00b7 source: fig2_trunc"}}, {"x": 0.151, "y": 5.1681, "d": {"head": "vocab 40k \u2014 t1 = 6,000 (frac 0.151)", "sub": "", "lines": [["#e87ba4", "5.1681", "bytes / token"], ["#898781", "38.28", "tokens / line"], ["#898781", "1.389", "disparity (flat in t1)"]], "minor": "curve spread 0.19% \u00b7 source: fig2_trunc"}}, {"x": 0.3019, "y": 5.1731, "d": {"head": "vocab 40k \u2014 t1 = 12,000 (frac 0.302)", "sub": "best measured on this curve", "lines": [["#e87ba4", "5.1731", "bytes / token"], ["#898781", "38.23", "tokens / line"], ["#898781", "1.389", "disparity (flat in t1)"]], "minor": "curve spread 0.19% \u00b7 source: fig2_trunc"}}]}, {"name": "vocab 50k", "color": "#008300", "end_label": "50k", "star": 3, "pts": [{"x": 0.0302, "y": 5.3885, "d": {"head": "vocab 50k \u2014 t1 = 1,500 (frac 0.030)", "sub": "", "lines": [["#008300", "5.3885", "bytes / token"], ["#898781", "36.74", "tokens / line"], ["#898781", "1.375", "disparity (flat in t1)"]], "minor": "curve spread 0.20% \u00b7 source: fig2_50k"}}, {"x": 0.0603, "y": 5.3908, "d": {"head": "vocab 50k \u2014 t1 = 3,000 (frac 0.060)", "sub": "", "lines": [["#008300", "5.3908", "bytes / token"], ["#898781", "36.73", "tokens / line"], ["#898781", "1.372", "disparity (flat in t1)"]], "minor": "curve spread 0.20% \u00b7 source: fig2_50k"}}, {"x": 0.1206, "y": 5.395, "d": {"head": "vocab 50k \u2014 t1 = 6,000 (frac 0.121)", "sub": "", "lines": [["#008300", "5.3950", "bytes / token"], ["#898781", "36.70", "tokens / line"], ["#898781", "1.371", "disparity (flat in t1)"]], "minor": "curve spread 0.20% \u00b7 source: fig2_50k"}}, {"x": 0.2412, "y": 5.3991, "d": {"head": "vocab 50k \u2014 t1 = 12,000 (frac 0.241)", "sub": "best measured on this curve", "lines": [["#008300", "5.3991", "bytes / token"], ["#898781", "36.66", "tokens / line"], ["#898781", "1.371", "disparity (flat in t1)"]], "minor": "curve spread 0.20% \u00b7 source: fig2_50k"}}]}, {"name": "vocab 80k", "color": "#4a3aa7", "end_label": "80k", "star": 0, "pts": [{"x": 0.2508, "y": 5.8702, "d": {"head": "vocab 80k \u2014 t1 = 20,000 (frac 0.251)", "sub": "best measured on this curve", "lines": [["#4a3aa7", "5.8702", "bytes / token"], ["#898781", "33.77", "tokens / line"], ["#898781", "1.366", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: fig2_80k"}}, {"x": 0.5016, "y": 5.8596, "d": {"head": "vocab 80k \u2014 t1 = 40,000 (frac 0.502)", "sub": "", "lines": [["#4a3aa7", "5.8596", "bytes / token"], ["#898781", "33.81", "tokens / line"], ["#898781", "1.363", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: fig2_80k"}}, {"x": 0.7022, "y": 5.8497, "d": {"head": "vocab 80k \u2014 t1 = 56,000 (frac 0.702)", "sub": "", "lines": [["#4a3aa7", "5.8497", "bytes / token"], ["#898781", "33.86", "tokens / line"], ["#898781", "1.361", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: fig2_80k"}}, {"x": 0.7524, "y": 5.8476, "d": {"head": "vocab 80k \u2014 t1 = 60,000 (frac 0.752)", "sub": "", "lines": [["#4a3aa7", "5.8476", "bytes / token"], ["#898781", "33.87", "tokens / line"], ["#898781", "1.370", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: trio_v80000"}}, {"x": 0.8026, "y": 5.8235, "d": {"head": "vocab 80k \u2014 t1 = 64,000 (frac 0.803)", "sub": "", "lines": [["#4a3aa7", "5.8235", "bytes / token"], ["#898781", "33.98", "tokens / line"], ["#898781", "1.391", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: fig2_80k"}}, {"x": 0.9029, "y": 5.8326, "d": {"head": "vocab 80k \u2014 t1 = 72,000 (frac 0.903)", "sub": "", "lines": [["#4a3aa7", "5.8326", "bytes / token"], ["#898781", "33.97", "tokens / line"], ["#898781", "1.366", "disparity (flat in t1)"]], "minor": "curve spread 0.80% \u00b7 source: fig2_80k"}}]}], "h": 460}], "table": {"cols": ["vocab", "t1", "frac", "bytes/tok", "tok/line", "disparity", "source"], "rows": [["8k", "400", "0.052", "3.6419", "54.03", "1.530", "fig2_8k"], ["8k", "800", "0.103", "3.6665", "53.73", "1.531", "fig2_8k"], ["8k", "1,200", "0.155", "3.6672", "53.72", "1.532", "fig2_8k"], ["8k", "1,600", "0.207", "3.6673", "53.72", "1.530", "fig2_8k"], ["8k", "2,000", "0.258", "3.6682", "53.70", "1.529", "explore_8k"], ["8k", "4,000", "0.516", "3.6612", "53.81", "1.531", "explore_8k"], ["8k", "6,000", "0.775", "3.6484", "53.99", "1.533", "explore_8k"], ["12k", "1,000", "0.085", "4.0112", "49.16", "1.491", "fig2_trunc"], ["12k", "1,500", "0.128", "4.0152", "49.10", "1.491", "fig2_trunc"], ["12k", "2,000", "0.170", "4.0158", "49.10", "1.485", "fig2_trunc"], ["12k", "2,500", "0.213", "4.0152", "49.10", "1.485", "fig2_trunc"], ["12k", "3,000", "0.255", "4.0159", "49.10", "1.484", "fig2_trunc"], ["12k", "6,000", "0.511", "4.0074", "49.19", "1.490", "fig2_trunc"], ["20k", "1,000", "0.051", "4.4730", "44.15", "1.452", "fig2_20k"], ["20k", "1,500", "0.076", "4.4779", "44.09", "1.451", "fig2_20k"], ["20k", "2,000", "0.101", "4.4792", "44.08", "1.452", "fig2_20k"], ["20k", "2,500", "0.127", "4.4762", "44.11", "1.452", "fig2_20k"], ["20k", "3,000", "0.152", "4.4779", "44.09", "1.451", "fig2_20k"], ["20k", "4,000", "0.203", "4.4773", "44.10", "1.451", "explore_20k"], ["20k", "4,936", "0.250", "4.4754", "44.12", "1.451", "fig2_20k_t25"], ["20k", "8,000", "0.405", "4.4743", "44.12", "1.450", "explore_20k"], ["20k", "12,000", "0.608", "4.4672", "44.18", "1.453", "explore_20k"], ["30k", "1,500", "0.050", "4.8737", "40.55", "1.421", "fig2_trunc"], ["30k", "3,000", "0.101", "4.8749", "40.55", "1.418", "fig2_trunc"], ["30k", "6,000", "0.202", "4.8772", "40.52", "1.418", "fig2_trunc"], ["30k", "12,000", "0.403", "4.8765", "40.51", "1.420", "fig2_trunc"], ["40k", "1,500", "0.038", "5.1632", "38.31", "1.393", "fig2_trunc"], ["40k", "3,000", "0.075", "5.1656", "38.30", "1.389", "fig2_trunc"], ["40k", "6,000", "0.151", "5.1681", "38.28", "1.389", "fig2_trunc"], ["40k", "12,000", "0.302", "5.1731", "38.23", "1.389", "fig2_trunc"], ["50k", "1,500", "0.030", "5.3885", "36.74", "1.375", "fig2_50k"], ["50k", "3,000", "0.060", "5.3908", "36.73", "1.372", "fig2_50k"], ["50k", "6,000", "0.121", "5.3950", "36.70", "1.371", "fig2_50k"], ["50k", "12,000", "0.241", "5.3991", "36.66", "1.371", "fig2_50k"], ["80k", "20,000", "0.251", "5.8702", "33.77", "1.366", "fig2_80k"], ["80k", "40,000", "0.502", "5.8596", "33.81", "1.363", "fig2_80k"], ["80k", "56,000", "0.702", "5.8497", "33.86", "1.361", "fig2_80k"], ["80k", "60,000", "0.752", "5.8476", "33.87", "1.370", "trio_v80000"], ["80k", "64,000", "0.803", "5.8235", "33.98", "1.391", "fig2_80k"], ["80k", "72,000", "0.903", "5.8326", "33.97", "1.366", "fig2_80k"]]}}, "frontier80k": {"panels": [{"title": "vocab 80k  (t1 = 20,000)", "xlabel": "tokens / line (\u2193 better compression)", "ylabel": "disparity (\u2193 fairer)", "series": [{"name": null, "color": "#e34948", "dash": true, "markers": false, "pts": [{"x": 33.664, "y": 1.2735, "d": null}, {"x": 33.791, "y": 1.2018, "d": null}, {"x": 34.142, "y": 1.1483, "d": null}, {"x": 34.472, "y": 1.0852, "d": null}, {"x": 34.688, "y": 1.0747, "d": null}]}, {"name": null, "color": "#2a78d6", "line": false, "pts": [{"x": 34.688, "y": 1.0747, "c": "#1c5cab", "d": {"head": "t2 = 0.30  (merge 24,000)", "sub": "parity gets the last 70% of the budget", "lines": [["#1c5cab", "34.688", "tokens / line (\u2193 better)"], ["#1c5cab", "1.0747", "disparity (\u2193 fairer)"], ["#898781", "0.0112", "Gini"]], "minor": "on the Pareto front \u00b7 worst deu_Latn \u00b7 best zho_Hans \u00b7 tail 124 min"}}, {"x": 34.472, "y": 1.0852, "c": "#2a78d6", "d": {"head": "t2 = 0.45  (merge 35,900)", "sub": "parity gets the last 55% of the budget", "lines": [["#2a78d6", "34.472", "tokens / line (\u2193 better)"], ["#2a78d6", "1.0852", "disparity (\u2193 fairer)"], ["#898781", "0.0145", "Gini"]], "minor": "on the Pareto front \u00b7 worst deu_Latn \u00b7 best eng_Latn \u00b7 tail 319 min"}}, {"x": 34.142, "y": 1.1483, "c": "#5598e7", "d": {"head": "t2 = 0.60  (merge 47,800)", "sub": "parity gets the last 40% of the budget", "lines": [["#5598e7", "34.142", "tokens / line (\u2193 better)"], ["#5598e7", "1.1483", "disparity (\u2193 fairer)"], ["#898781", "0.0235", "Gini"]], "minor": "on the Pareto front \u00b7 worst deu_Latn \u00b7 best zho_Hans \u00b7 tail 240 min"}}, {"x": 33.791, "y": 1.2018, "c": "#86b6ef", "d": {"head": "t2 = 0.75  (merge 59,800)", "sub": "parity gets the last 25% of the budget", "lines": [["#86b6ef", "33.791", "tokens / line (\u2193 better)"], ["#86b6ef", "1.2018", "disparity (\u2193 fairer)"], ["#898781", "0.0356", "Gini"]], "minor": "on the Pareto front \u00b7 worst deu_Latn \u00b7 best eng_Latn \u00b7 tail 151 min"}}, {"x": 33.664, "y": 1.2735, "c": "#b7d3f6", "d": {"head": "t2 = 0.90  (merge 71,800)", "sub": "parity gets the last 10% of the budget", "lines": [["#b7d3f6", "33.664", "tokens / line (\u2193 better)"], ["#b7d3f6", "1.2735", "disparity (\u2193 fairer)"], ["#898781", "0.0467", "Gini"]], "minor": "on the Pareto front \u00b7 worst rus_Cyrl \u00b7 best eng_Latn \u00b7 tail 61 min"}}, {"x": 33.773, "y": 1.3659, "c": "#b7d3f6", "d": {"head": "t2 = 1.00  (merge 79,744)", "sub": "parity gets the last 0% of the budget", "lines": [["#b7d3f6", "33.773", "tokens / line (\u2193 better)"], ["#b7d3f6", "1.3659", "disparity (\u2193 fairer)"], ["#898781", "0.0604", "Gini"]], "minor": "no parity \u2014 DOMINATED (t2=0.90 beats it on BOTH axes) \u00b7 worst rus_Cyrl \u00b7 best eng_Latn"}}]}], "h": 430}], "table": {"cols": ["vocab", "t2", "tok/line", "disparity", "gini", "worst", "status"], "rows": [["80k", "0.30", "34.688", "1.0747", "0.0112", "deu_Latn", "front"], ["80k", "0.45", "34.472", "1.0852", "0.0145", "deu_Latn", "front"], ["80k", "0.60", "34.142", "1.1483", "0.0235", "deu_Latn", "front"], ["80k", "0.75", "33.791", "1.2018", "0.0356", "deu_Latn", "front"], ["80k", "0.90", "33.664", "1.2735", "0.0467", "rus_Cyrl", "front"], ["80k", "1.00", "33.773", "1.3659", "0.0604", "rus_Cyrl", "dominated"]]}}, "dial": {"panels": [{"title": "disparity worst/best  (\u2193 fairer)", "xlabel": "t2 \u2014 when parity starts (1.0 = never)", "ylabel": "disparity worst/best  (\u2193 fairer)", "series": [{"name": "vocab 8k", "color": "#2a78d6", "end_label": "8k", "pts": [{"x": 0.258, "y": 1.0514, "d": {"head": "vocab 8k \u2014 t2 = 0.26", "sub": "parity gets the last 74% of the budget", "lines": [["#2a78d6", "1.0514", "disparity"], ["#2a78d6", "0.0078", "Gini"], ["#898781", "54.18", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.375, "y": 1.0497, "d": {"head": "vocab 8k \u2014 t2 = 0.38", "sub": "parity gets the last 62% of the budget", "lines": [["#2a78d6", "1.0497", "disparity"], ["#2a78d6", "0.0077", "Gini"], ["#898781", "54.13", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.5, "y": 1.0531, "d": {"head": "vocab 8k \u2014 t2 = 0.50", "sub": "parity gets the last 50% of the budget", "lines": [["#2a78d6", "1.0531", "disparity"], ["#2a78d6", "0.0091", "Gini"], ["#898781", "53.92", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 0.625, "y": 1.1252, "d": {"head": "vocab 8k \u2014 t2 = 0.62", "sub": "parity gets the last 38% of the budget", "lines": [["#2a78d6", "1.1252", "disparity"], ["#2a78d6", "0.0194", "Gini"], ["#898781", "53.61", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.75, "y": 1.2003, "d": {"head": "vocab 8k \u2014 t2 = 0.75", "sub": "parity gets the last 25% of the budget", "lines": [["#2a78d6", "1.2003", "disparity"], ["#2a78d6", "0.0344", "Gini"], ["#898781", "53.31", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.875, "y": 1.295, "d": {"head": "vocab 8k \u2014 t2 = 0.88", "sub": "parity gets the last 12% of the budget", "lines": [["#2a78d6", "1.2950", "disparity"], ["#2a78d6", "0.0522", "Gini"], ["#898781", "53.17", "tokens / line"]], "minor": "worst hin_Deva \u00b7 best zho_Hans"}}, {"x": 1.0, "y": 1.5291, "d": {"head": "vocab 8k \u2014 t2 = 1.00", "sub": "parity gets the last 0% of the budget", "lines": [["#2a78d6", "1.5291", "disparity"], ["#2a78d6", "0.0788", "Gini"], ["#898781", "53.70", "tokens / line"]], "minor": "worst tha_Thai \u00b7 best zho_Hans"}}]}, {"name": "vocab 20k", "color": "#eb6834", "end_label": "20k", "pts": [{"x": 0.152, "y": 1.0702, "d": {"head": "vocab 20k \u2014 t2 = 0.15", "sub": "parity gets the last 85% of the budget", "lines": [["#eb6834", "1.0702", "disparity"], ["#eb6834", "0.0098", "Gini"], ["#898781", "44.39", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.299, "y": 1.0642, "d": {"head": "vocab 20k \u2014 t2 = 0.30", "sub": "parity gets the last 70% of the budget", "lines": [["#eb6834", "1.0642", "disparity"], ["#eb6834", "0.0094", "Gini"], ["#898781", "44.34", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.451, "y": 1.0619, "d": {"head": "vocab 20k \u2014 t2 = 0.45", "sub": "parity gets the last 55% of the budget", "lines": [["#eb6834", "1.0619", "disparity"], ["#eb6834", "0.0096", "Gini"], ["#898781", "44.21", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.598, "y": 1.1254, "d": {"head": "vocab 20k \u2014 t2 = 0.60", "sub": "parity gets the last 40% of the budget", "lines": [["#eb6834", "1.1254", "disparity"], ["#eb6834", "0.0187", "Gini"], ["#898781", "43.99", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.75, "y": 1.2151, "d": {"head": "vocab 20k \u2014 t2 = 0.75", "sub": "parity gets the last 25% of the budget", "lines": [["#eb6834", "1.2151", "disparity"], ["#eb6834", "0.0347", "Gini"], ["#898781", "43.73", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.902, "y": 1.3172, "d": {"head": "vocab 20k \u2014 t2 = 0.90", "sub": "parity gets the last 10% of the budget", "lines": [["#eb6834", "1.3172", "disparity"], ["#eb6834", "0.0537", "Gini"], ["#898781", "43.74", "tokens / line"]], "minor": "worst hin_Deva \u00b7 best zho_Hans"}}, {"x": 1.0, "y": 1.4506, "d": {"head": "vocab 20k \u2014 t2 = 1.00", "sub": "parity gets the last 0% of the budget", "lines": [["#eb6834", "1.4506", "disparity"], ["#eb6834", "0.0723", "Gini"], ["#898781", "44.09", "tokens / line"]], "minor": "worst tha_Thai \u00b7 best zho_Hans"}}]}, {"name": "vocab 50k", "color": "#1baf7a", "end_label": "50k", "pts": [{"x": 0.45, "y": 1.0719, "d": {"head": "vocab 50k \u2014 t2 = 0.45", "sub": "parity gets the last 55% of the budget", "lines": [["#1baf7a", "1.0719", "disparity"], ["#1baf7a", "0.0116", "Gini"], ["#898781", "37.08", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.599, "y": 1.1338, "d": {"head": "vocab 50k \u2014 t2 = 0.60", "sub": "parity gets the last 40% of the budget", "lines": [["#1baf7a", "1.1338", "disparity"], ["#1baf7a", "0.0200", "Gini"], ["#898781", "36.83", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.75, "y": 1.1997, "d": {"head": "vocab 50k \u2014 t2 = 0.75", "sub": "parity gets the last 25% of the budget", "lines": [["#1baf7a", "1.1997", "disparity"], ["#1baf7a", "0.0343", "Gini"], ["#898781", "36.53", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.901, "y": 1.2766, "d": {"head": "vocab 50k \u2014 t2 = 0.90", "sub": "parity gets the last 10% of the budget", "lines": [["#1baf7a", "1.2766", "disparity"], ["#1baf7a", "0.0497", "Gini"], ["#898781", "36.54", "tokens / line"]], "minor": "worst rus_Cyrl \u00b7 best zho_Hans"}}, {"x": 1.0, "y": 1.371, "d": {"head": "vocab 50k \u2014 t2 = 1.00", "sub": "parity gets the last 0% of the budget", "lines": [["#1baf7a", "1.3710", "disparity"], ["#1baf7a", "0.0633", "Gini"], ["#898781", "36.66", "tokens / line"]], "minor": "worst tha_Thai \u00b7 best zho_Hans"}}]}, {"name": "vocab 80k", "color": "#eda100", "end_label": "80k", "pts": [{"x": 0.301, "y": 1.0747, "d": {"head": "vocab 80k \u2014 t2 = 0.30", "sub": "parity gets the last 70% of the budget", "lines": [["#eda100", "1.0747", "disparity"], ["#eda100", "0.0112", "Gini"], ["#898781", "34.69", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.45, "y": 1.0852, "d": {"head": "vocab 80k \u2014 t2 = 0.45", "sub": "parity gets the last 55% of the budget", "lines": [["#eda100", "1.0852", "disparity"], ["#eda100", "0.0145", "Gini"], ["#898781", "34.47", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 0.599, "y": 1.1483, "d": {"head": "vocab 80k \u2014 t2 = 0.60", "sub": "parity gets the last 40% of the budget", "lines": [["#eda100", "1.1483", "disparity"], ["#eda100", "0.0235", "Gini"], ["#898781", "34.14", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best zho_Hans"}}, {"x": 0.75, "y": 1.2018, "d": {"head": "vocab 80k \u2014 t2 = 0.75", "sub": "parity gets the last 25% of the budget", "lines": [["#eda100", "1.2018", "disparity"], ["#eda100", "0.0356", "Gini"], ["#898781", "33.79", "tokens / line"]], "minor": "worst deu_Latn \u00b7 best eng_Latn"}}, {"x": 0.9, "y": 1.2735, "d": {"head": "vocab 80k \u2014 t2 = 0.90", "sub": "parity gets the last 10% of the budget", "lines": [["#eda100", "1.2735", "disparity"], ["#eda100", "0.0467", "Gini"], ["#898781", "33.66", "tokens / line"]], "minor": "worst rus_Cyrl \u00b7 best eng_Latn"}}, {"x": 1.0, "y": 1.3659, "d": {"head": "vocab 80k \u2014 t2 = 1.00", "sub": "parity gets the last 0% of the budget", "lines": [["#eda100", "1.3659", "disparity"], ["#eda100", "0.0604", "Gini"], ["#898781", "33.77", "tokens / line"]], "minor": "worst rus_Cyrl \u00b7 best eng_Latn"}}]}], "h": 420}], "table": {"cols": ["vocab", "t2", "disparity", "gini", "tok/line", "worst"], "rows": [["8k", "0.26", "1.0514", "0.0078", "54.18", "deu_Latn"], ["8k", "0.38", "1.0497", "0.0077", "54.13", "deu_Latn"], ["8k", "0.50", "1.0531", "0.0091", "53.92", "deu_Latn"], ["8k", "0.62", "1.1252", "0.0194", "53.61", "deu_Latn"], ["8k", "0.75", "1.2003", "0.0344", "53.31", "deu_Latn"], ["8k", "0.88", "1.2950", "0.0522", "53.17", "hin_Deva"], ["8k", "1.00", "1.5291", "0.0788", "53.70", "tha_Thai"], ["20k", "0.15", "1.0702", "0.0098", "44.39", "deu_Latn"], ["20k", "0.30", "1.0642", "0.0094", "44.34", "deu_Latn"], ["20k", "0.45", "1.0619", "0.0096", "44.21", "deu_Latn"], ["20k", "0.60", "1.1254", "0.0187", "43.99", "deu_Latn"], ["20k", "0.75", "1.2151", "0.0347", "43.73", "deu_Latn"], ["20k", "0.90", "1.3172", "0.0537", "43.74", "hin_Deva"], ["20k", "1.00", "1.4506", "0.0723", "44.09", "tha_Thai"], ["50k", "0.45", "1.0719", "0.0116", "37.08", "deu_Latn"], ["50k", "0.60", "1.1338", "0.0200", "36.83", "deu_Latn"], ["50k", "0.75", "1.1997", "0.0343", "36.53", "deu_Latn"], ["50k", "0.90", "1.2766", "0.0497", "36.54", "rus_Cyrl"], ["50k", "1.00", "1.3710", "0.0633", "36.66", "tha_Thai"], ["80k", "0.30", "1.0747", "0.0112", "34.69", "deu_Latn"], ["80k", "0.45", "1.0852", "0.0145", "34.47", "deu_Latn"], ["80k", "0.60", "1.1483", "0.0235", "34.14", "deu_Latn"], ["80k", "0.75", "1.2018", "0.0356", "33.79", "deu_Latn"], ["80k", "0.90", "1.2735", "0.0467", "33.66", "rus_Cyrl"], ["80k", "1.00", "1.3659", "0.0604", "33.77", "rus_Cyrl"]]}}, "interaction": {"panels": [{"title": "disparity worst/best  (\u2193 fairer)", "xlabel": "t2 (fraction of merge budget)", "ylabel": "disparity worst/best  (\u2193 fairer)", "series": [{"name": "t1 = 0.1", "color": "#2a78d6", "pts": [{"x": 0.2, "y": 1.0558, "d": {"head": "t1 = 0.1, t2 = 0.2", "sub": "interior cell", "lines": [["#2a78d6", "1.0558", "disparity"], ["#2a78d6", "54.12", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0016 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.4, "y": 1.0558, "d": {"head": "t1 = 0.1, t2 = 0.4", "sub": "interior cell", "lines": [["#2a78d6", "1.0558", "disparity"], ["#2a78d6", "54.07", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0090 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.6, "y": 1.1137, "d": {"head": "t1 = 0.1, t2 = 0.6", "sub": "interior cell", "lines": [["#2a78d6", "1.1137", "disparity"], ["#2a78d6", "53.67", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0059 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.8, "y": 1.2268, "d": {"head": "t1 = 0.1, t2 = 0.8", "sub": "interior cell", "lines": [["#2a78d6", "1.2268", "disparity"], ["#2a78d6", "53.27", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0072 (bar 0.02) \u00b7 worst hin_Deva"}}, {"x": 1.0, "y": 1.5317, "d": {"head": "t1 = 0.1, t2 = 1.0", "sub": "no-parity edge (= superbpe)", "lines": [["#2a78d6", "1.5317", "disparity"], ["#2a78d6", "53.74", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0047 (bar 0.02) \u00b7 worst tha_Thai"}}]}, {"name": "t1 = 0.2", "color": "#eb6834", "pts": [{"x": 0.2, "y": 1.0542, "d": {"head": "t1 = 0.2, t2 = 0.2", "sub": "t2=t1 edge (no classical-super)", "lines": [["#eb6834", "1.0542", "disparity"], ["#eb6834", "54.16", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0016 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.4, "y": 1.0523, "d": {"head": "t1 = 0.2, t2 = 0.4", "sub": "interior cell", "lines": [["#eb6834", "1.0523", "disparity"], ["#eb6834", "54.08", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0090 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.6, "y": 1.1114, "d": {"head": "t1 = 0.2, t2 = 0.6", "sub": "interior cell", "lines": [["#eb6834", "1.1114", "disparity"], ["#eb6834", "53.67", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0059 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.8, "y": 1.2229, "d": {"head": "t1 = 0.2, t2 = 0.8", "sub": "interior cell", "lines": [["#eb6834", "1.2229", "disparity"], ["#eb6834", "53.25", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0072 (bar 0.02) \u00b7 worst hin_Deva"}}, {"x": 1.0, "y": 1.531, "d": {"head": "t1 = 0.2, t2 = 1.0", "sub": "no-parity edge (= superbpe)", "lines": [["#eb6834", "1.5310", "disparity"], ["#eb6834", "53.72", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0047 (bar 0.02) \u00b7 worst tha_Thai"}}]}, {"name": "t1 = 0.3", "color": "#1baf7a", "pts": [{"x": 0.4, "y": 1.0499, "d": {"head": "t1 = 0.3, t2 = 0.4", "sub": "interior cell", "lines": [["#1baf7a", "1.0499", "disparity"], ["#1baf7a", "54.14", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0090 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.6, "y": 1.1129, "d": {"head": "t1 = 0.3, t2 = 0.6", "sub": "interior cell", "lines": [["#1baf7a", "1.1129", "disparity"], ["#1baf7a", "53.69", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0059 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.8, "y": 1.2209, "d": {"head": "t1 = 0.3, t2 = 0.8", "sub": "interior cell", "lines": [["#1baf7a", "1.2209", "disparity"], ["#1baf7a", "53.28", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0072 (bar 0.02) \u00b7 worst hin_Deva"}}, {"x": 1.0, "y": 1.5292, "d": {"head": "t1 = 0.3, t2 = 1.0", "sub": "no-parity edge (= superbpe)", "lines": [["#1baf7a", "1.5292", "disparity"], ["#1baf7a", "53.69", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0047 (bar 0.02) \u00b7 worst tha_Thai"}}]}, {"name": "t1 = 0.4", "color": "#eda100", "pts": [{"x": 0.4, "y": 1.0468, "d": {"head": "t1 = 0.4, t2 = 0.4", "sub": "t2=t1 edge (no classical-super)", "lines": [["#eda100", "1.0468", "disparity"], ["#eda100", "54.23", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0090 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.6, "y": 1.1104, "d": {"head": "t1 = 0.4, t2 = 0.6", "sub": "interior cell", "lines": [["#eda100", "1.1104", "disparity"], ["#eda100", "53.72", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0059 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.8, "y": 1.2207, "d": {"head": "t1 = 0.4, t2 = 0.8", "sub": "interior cell", "lines": [["#eda100", "1.2207", "disparity"], ["#eda100", "53.30", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0072 (bar 0.02) \u00b7 worst hin_Deva"}}, {"x": 1.0, "y": 1.527, "d": {"head": "t1 = 0.4, t2 = 1.0", "sub": "no-parity edge (= superbpe)", "lines": [["#eda100", "1.5270", "disparity"], ["#eda100", "53.71", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0047 (bar 0.02) \u00b7 worst tha_Thai"}}]}, {"name": "t1 = 0.5", "color": "#e87ba4", "pts": [{"x": 0.6, "y": 1.1078, "d": {"head": "t1 = 0.5, t2 = 0.6", "sub": "interior cell", "lines": [["#e87ba4", "1.1078", "disparity"], ["#e87ba4", "53.79", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0059 (bar 0.02) \u00b7 worst deu_Latn"}}, {"x": 0.8, "y": 1.2196, "d": {"head": "t1 = 0.5, t2 = 0.8", "sub": "interior cell", "lines": [["#e87ba4", "1.2196", "disparity"], ["#e87ba4", "53.35", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0072 (bar 0.02) \u00b7 worst hin_Deva"}}, {"x": 1.0, "y": 1.5313, "d": {"head": "t1 = 0.5, t2 = 1.0", "sub": "no-parity edge (= superbpe)", "lines": [["#e87ba4", "1.5313", "disparity"], ["#e87ba4", "53.81", "tokens / line"]], "minor": "spread across t1 rows at this t2: 0.0047 (bar 0.02) \u00b7 worst tha_Thai"}}]}], "h": 420}], "table": {"cols": ["t1", "t2", "disparity", "tok/line", "gini", "worst"], "rows": [["0.1", "0.2", "1.0558", "54.12", "0.0082", "deu_Latn"], ["0.1", "0.4", "1.0558", "54.07", "0.0079", "deu_Latn"], ["0.1", "0.6", "1.1137", "53.67", "0.0171", "deu_Latn"], ["0.1", "0.8", "1.2268", "53.27", "0.0401", "hin_Deva"], ["0.1", "1.0", "1.5317", "53.74", "0.0788", "tha_Thai"], ["0.2", "0.2", "1.0542", "54.16", "0.0079", "deu_Latn"], ["0.2", "0.4", "1.0523", "54.08", "0.0076", "deu_Latn"], ["0.2", "0.6", "1.1114", "53.67", "0.0168", "deu_Latn"], ["0.2", "0.8", "1.2229", "53.25", "0.0399", "hin_Deva"], ["0.2", "1.0", "1.5310", "53.72", "0.0789", "tha_Thai"], ["0.3", "0.4", "1.0499", "54.14", "0.0074", "deu_Latn"], ["0.3", "0.6", "1.1129", "53.69", "0.0171", "deu_Latn"], ["0.3", "0.8", "1.2209", "53.28", "0.0399", "hin_Deva"], ["0.3", "1.0", "1.5292", "53.69", "0.0788", "tha_Thai"], ["0.4", "0.4", "1.0468", "54.23", "0.0074", "deu_Latn"], ["0.4", "0.6", "1.1104", "53.72", "0.0167", "deu_Latn"], ["0.4", "0.8", "1.2207", "53.30", "0.0397", "hin_Deva"], ["0.4", "1.0", "1.5270", "53.71", "0.0786", "tha_Thai"], ["0.5", "0.6", "1.1078", "53.79", "0.0165", "deu_Latn"], ["0.5", "0.8", "1.2196", "53.35", "0.0395", "hin_Deva"], ["0.5", "1.0", "1.5313", "53.81", "0.0792", "tha_Thai"]]}}};
+
+const W = 940, ML = 60, MR = 16, MT = 26, MB = 40;
+const NS = "http://www.w3.org/2000/svg";
+const el = (n, at) => { const e = document.createElementNS(NS, n);
+  for (const k in at) e.setAttribute(k, at[k]); return e; };
+
+function ticks(lo, hi, n) {
+  const span = hi - lo, raw = span / n, mag = Math.pow(10, Math.floor(Math.log10(raw)));
+  const step = [1, 2, 2.5, 5, 10].map(k => k * mag).find(s => span / s <= n + 1);
+  const dec = Math.max(0, -Math.floor(Math.log10(step)) + (step / mag === 2.5 ? 1 : 0));
+  const out = []; for (let v = Math.ceil(lo / step) * step; v <= hi + 1e-9; v += step) out.push(v);
+  return { vals: out, dec };
+}
+const fx = (v, dec, big) => big ? (v / 1000) + "k" : v.toFixed(dec);
+
+for (const key of Object.keys(SPECS)) {
+  const S = SPECS[key];
+  const mount = document.getElementById("c-" + key);
+  const tip = document.getElementById("tip-" + key);
+  const block = document.getElementById("fb-" + key);
+  const PTS = [];
+  let cur = -1;
+
+  // legend
+  const names = [];
+  for (const P of S.panels) for (const s of P.series)
+    if (s.name && !names.some(n => n[0] === s.name)) names.push([s.name, s.color, s.dash]);
+  if (names.length > 1) {
+    const lg = document.createElement("div"); lg.className = "legend";
+    for (const [n, c, dash] of names) {
+      const it = document.createElement("span"); it.className = "it";
+      const k = document.createElement("span"); k.className = "key";
+      k.style.borderTopColor = c; if (dash) k.style.borderTopStyle = "dashed";
+      const t = document.createElement("span"); t.textContent = n;
+      it.append(k, t); lg.append(it);
+    }
+    mount.append(lg);
+  }
+
+  S.panels.forEach((P, pi) => {
+    const H = P.h || 360, IW = W - ML - MR, IH = H - MT - MB;
+    if (P.title && S.panels.length > 1) {
+      const t = document.createElement("div"); t.className = "pt";
+      t.textContent = P.title; mount.append(t);
+    }
+    const svg = el("svg", { viewBox: "0 0 " + W + " " + H, role: "img",
+                            "aria-label": P.title || "chart" });
+    mount.append(svg);
+
+    const xs = P.series.flatMap(s => s.pts.map(p => p.x));
+    const ys = P.series.flatMap(s => s.pts.map(p => p.y));
+    let xlo = P.xdom ? P.xdom[0] : Math.min(...xs), xhi = P.xdom ? P.xdom[1] : Math.max(...xs);
+    if (!P.xdom) { const px = (xhi - xlo) * 0.05 || 1; xlo -= px; xhi += px; }
+    let ylo = Math.min(...ys), yhi = Math.max(...ys);
+    { const py = (yhi - ylo) * 0.08 || 1; ylo -= py; yhi += py; }
+    const X = v => ML + (v - xlo) / (xhi - xlo) * IW;
+    const Y = v => MT + IH - (v - ylo) / (yhi - ylo) * IH;
+    const bigX = xhi >= 5000;
+
+    for (const b of (P.bands || [])) {
+      svg.appendChild(el("rect", { x: X(b.x0), y: MT, width: X(b.x1) - X(b.x0),
+        height: IH, fill: b.fill || "rgba(11,11,11,0.05)" }));
+      if (b.label && (P.band_labels !== false)) {
+        const top = b.label_pos === "top";
+        const bt = el("text", { x: (X(b.x0) + X(b.x1)) / 2,
+          y: top ? MT + 14 : MT + IH - 6, "text-anchor": "middle",
+          fill: "#898781", "font-size": "10.5" });
+        bt.textContent = b.label; svg.appendChild(bt);
+      }
+    }
+    const ty = ticks(ylo, yhi, 5);
+    for (const v of ty.vals) {
+      svg.appendChild(el("line", { x1: ML, x2: W - MR, y1: Y(v), y2: Y(v),
+        stroke: "#e1e0d9", "stroke-width": 1 }));
+      const lt = el("text", { x: ML - 7, y: Y(v) + 4, "text-anchor": "end",
+        fill: "#898781" });
+      lt.textContent = v.toFixed(ty.dec); svg.appendChild(lt);
+    }
+    svg.appendChild(el("line", { x1: ML, x2: W - MR, y1: MT + IH, y2: MT + IH,
+      stroke: "#c3c2b7", "stroke-width": 1 }));
+    const tx = ticks(xlo, xhi, 7);
+    for (const v of tx.vals) {
+      const lt = el("text", { x: X(v), y: MT + IH + 16, "text-anchor": "middle",
+        fill: "#898781" });
+      lt.textContent = fx(v, tx.dec, bigX); svg.appendChild(lt);
+    }
+    if (P.xlabel) {
+      const xl = el("text", { x: ML + IW / 2, y: H - 6, "text-anchor": "middle",
+        fill: "#52514e" });
+      xl.textContent = P.xlabel; svg.appendChild(xl);
+    }
+    if (P.ylabel) {
+      const yl = el("text", { x: 14, y: MT + IH / 2, fill: "#52514e",
+        "text-anchor": "middle",
+        transform: "rotate(-90 14 " + (MT + IH / 2) + ")" });
+      yl.textContent = P.ylabel; svg.appendChild(yl);
+    }
+    for (const r of (P.vrules || [])) {
+      svg.appendChild(el("line", { x1: X(r.x), x2: X(r.x), y1: MT, y2: MT + IH,
+        stroke: r.color, "stroke-width": 1.4, "stroke-dasharray": "5 4" }));
+      if (P.vrule_labels) {
+        const lt = el("text", { x: X(r.x) + 4, y: MT + 28, fill: r.color,
+          "font-size": "11" });
+        lt.textContent = r.label; svg.appendChild(lt);
+      }
+    }
+    for (const s of P.series) {
+      if (s.line !== false && s.pts.length > 1) {
+        const d = s.pts.map((p, i) => (i ? "L" : "M") + X(p.x) + " " + Y(p.y)).join("");
+        svg.appendChild(el("path", { d, fill: "none", stroke: s.color,
+          "stroke-width": 2, "stroke-linejoin": "round",
+          "stroke-dasharray": s.dash ? "6 5" : "none" }));
+      }
+      if (s.markers !== false) s.pts.forEach((p, i) => {
+        const best = s.star === i;
+        const c = el("circle", { cx: X(p.x), cy: Y(p.y), r: best ? 7 : 4.5,
+          fill: p.c || s.color, stroke: best ? "#0b0b0b" : "none",
+          "stroke-width": best ? 1.4 : 0 });
+        svg.appendChild(c);
+        if (p.d) PTS.push({ svg, s, p, cx: X(p.x), cy: Y(p.y), circle: c, best,
+                            hpx: H });
+      });
+      if (s.end_label) {
+        const last = s.pts[s.pts.length - 1];
+        const lt = el("text", { x: X(last.x) + 8, y: Y(last.y) + 4, fill: s.color,
+          "font-weight": "650", "font-size": "12" });
+        lt.textContent = s.end_label; svg.appendChild(lt);
+      }
+    }
+    svg.addEventListener("pointermove", e => {
+      const r = svg.getBoundingClientRect();
+      const mx = (e.clientX - r.left) / r.width * W;
+      const my = (e.clientY - r.top) / r.height * (P.h || 360);
+      let bi = -1, bd = Infinity;
+      PTS.forEach((a, i) => { if (a.svg !== svg) return;
+        const d = (a.cx - mx) ** 2 + (a.cy - my) ** 2; if (d < bd) { bd = d; bi = i; } });
+      if (bi >= 0) { cur = bi; show(bi); }
+    });
+    svg.addEventListener("pointerleave", hide);
+  });
+
+  function show(i) {
+    const a = PTS[i], d = a.p.d;
+    tip.replaceChildren();
+    const h = document.createElement("div"); h.className = "head"; h.textContent = d.head;
+    tip.append(h);
+    if (d.sub) { const s2 = document.createElement("div"); s2.className = "sub2";
+      s2.textContent = d.sub; tip.append(s2); }
+    for (const [color, val, lbl] of d.lines) {
+      const r = document.createElement("div"); r.className = "row";
+      const k = document.createElement("span"); k.className = "key";
+      k.style.borderTopColor = color || a.s.color;
+      const v = document.createElement("span"); v.className = "val"; v.textContent = val;
+      const l = document.createElement("span"); l.className = "lbl"; l.textContent = lbl;
+      r.append(k, v, l); tip.append(r);
+    }
+    if (d.minor) { const m = document.createElement("div"); m.className = "minor";
+      m.textContent = d.minor; tip.append(m); }
+    PTS.forEach(b => { b.circle.setAttribute("r", b.best ? 7 : 4.5);
+      if (!b.best) b.circle.setAttribute("stroke", "none"); });
+    a.circle.setAttribute("r", 7);
+    a.circle.setAttribute("stroke", "#fcfcfb"); a.circle.setAttribute("stroke-width", 2);
+    const sr = a.svg.getBoundingClientRect(), br = block.getBoundingClientRect();
+    const px = sr.left - br.left + a.cx / W * sr.width;
+    const py = sr.top - br.top + a.cy / a.hpx * sr.height;
+    tip.style.display = "block";
+    const flip = px > br.width * 0.6;
+    tip.style.left = flip ? (px - tip.offsetWidth - 14) + "px" : (px + 14) + "px";
+    tip.style.top = Math.max(6, py - tip.offsetHeight / 2) + "px";
+  }
+  function hide() { tip.style.display = "none";
+    PTS.forEach(b => { b.circle.setAttribute("r", b.best ? 7 : 4.5);
+      if (!b.best) b.circle.setAttribute("stroke", "none"); }); }
+  mount.addEventListener("keydown", e => {
+    if (e.key === "Escape") { hide(); cur = -1; return; }
+    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
+    e.preventDefault();
+    cur = e.key === "ArrowRight" ? Math.min(PTS.length - 1, cur < 0 ? 0 : cur + 1)
+                                 : Math.max(0, cur < 0 ? 0 : cur - 1);
+    show(cur);
+  });
+
+  const tbl = document.getElementById("t-" + key);
+  const tr = document.createElement("tr");
+  for (const h of S.table.cols) { const th = document.createElement("th");
+    th.textContent = h; tr.append(th); }
+  tbl.append(tr);
+  for (const row of S.table.rows) {
+    const r = document.createElement("tr");
+    for (const v of row) { const td = document.createElement("td");
+      td.textContent = v; r.append(td); }
+    tbl.append(r);
+  }
+}
+</script></body></html>

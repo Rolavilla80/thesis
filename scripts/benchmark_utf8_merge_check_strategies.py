@@ -71,8 +71,10 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--strategies",
         nargs="+",
-        default=["none", "max", "rescan", "local"],
-        choices=["none", "max", "rescan", "local", "admissible"],
+        default=["none", "max", "rescan", "block45"],
+        choices=["none", "max", "rescan", "rule1",
+                 "block3", "block4", "block5", "block34", "block35", "block45", "block345",
+                 "char_first"],
         help="Strategies to benchmark. Default: %(default)s",
     )
     parser.add_argument(

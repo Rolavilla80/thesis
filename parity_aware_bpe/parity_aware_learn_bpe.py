@@ -121,8 +121,14 @@ def create_parser(subparsers=None):
         help="verbose mode.")
     parser.add_argument(
         '--utf8-merge-check-strategy', type=str, default='none',
-        choices=['none', 'max', 'rescan', 'local'],
-        help="Where to apply UTF-8 merge validity filtering. 'max' checks only the selected best pair, 'rescan' rescans all candidates after each update, and 'local' filters pairs when they are inserted or updated. Default: %(default)s")
+        choices=['none', 'max', 'rescan', 'rule1',
+                 'block3', 'block4', 'block5', 'block34', 'block35', 'block45', 'block345',
+                 'char_first'],
+        help="UTF-8 merge filtering strategy. Case-blocking strategies (block3, block4, block5, "
+             "block34, block35, block45, block345) reject merges matching the specified case "
+             "numbers: 3=F+P, 4=S+F, 5=S+P. 'char_first' blocks cases 3+4+5 and forces "
+             "character assembly first. 'rule1' blocks bare prefix+suffix merges. "
+             "'max'/'rescan' are selection-time filters. Default: %(default)s")
     parser.add_argument(
         '--merge-log', type=str, default=None,
         help="Optional CSV path for logging selected merges and their UTF-8 classification."
@@ -362,8 +368,8 @@ def utf8_symbol_state(symbol):
     """
     Returns:
       'complete'  -> valid UTF-8 string
-      'prefix'    -> full UTF-8 chars plus one unfinished char prefix at the end
-      'invalid'   -> broken structure
+      'prefix'    -> full UTF-8 chars plus one unfinished char lead at the end
+      'suffix'    -> starts with a continuation byte (cannot start a character)
     """
     if not BYTELEVEL_PRETOKENIZER_ENABLED:
         return "complete"
@@ -381,7 +387,7 @@ def utf8_symbol_state(symbol):
             continue
 
         # whatever remains must be a valid unfinished prefix at the end
-        return "prefix" if is_valid_utf8_char_prefix(raw[i:]) else "invalid"
+        return "prefix" if is_valid_utf8_char_prefix(raw[i:]) else "suffix"
 
     return "complete"
 
@@ -392,6 +398,82 @@ def is_admissible_utf8_symbol(symbol):
 
 def is_admissible_utf8_pair(pair):
     return is_admissible_utf8_symbol("".join(pair))
+
+
+# ---------------------------------------------------------------------------
+# Generic case-blocking admissibility
+# ---------------------------------------------------------------------------
+
+# Map from strategy name to the set of cases it blocks.
+# Cases:  3 = F+P,  4 = S+F,  5 = S+P
+STRATEGY_BLOCKED_CASES = {
+    'block3':     frozenset({3}),
+    'block4':     frozenset({4}),
+    'block5':     frozenset({5}),
+    'block34':    frozenset({3, 4}),
+    'block35':    frozenset({3, 5}),
+    'block45':    frozenset({4, 5}),
+    'block345':   frozenset({3, 4, 5}),
+    'char_first': frozenset({3, 4, 5}),
+}
+
+# All strategy names that use local-style filtering (checked in get_pair_statistics
+# and update_pair_statistics to gate whether new pairs are added to the pool).
+LOCAL_STRATEGIES = frozenset(STRATEGY_BLOCKED_CASES.keys()) | {'rule1'}
+
+
+def get_block_reason(pair, strategy):
+    """Single source of truth for why a pair is rejected under a local strategy.
+
+    Returns one of:
+        'case3' / 'case4' / 'case5'  -- blocked by case-blocking strategy
+        'rule1' / 'utf8'             -- blocked by rule1 strategy
+        None                         -- pair is admissible
+
+    Cases:
+        3: F+P  (complete + prefix)   -- composite recoverable prefix
+        4: S+F  (suffix  + complete)  -- produces suffix-starting token
+        5: S+P  (suffix  + prefix)    -- produces suffix-starting token
+
+    Case-blocking strategies (block3, block4, block5, block34, ...) are TRUE
+    INDEPENDENT ABLATIONS: they block ONLY the listed cases and apply no other
+    well-formedness check. Pairs whose merged symbol would be a suffix (e.g.
+    case-4/5 not in the list, F+S, S+S) are ADMITTED, so the resulting BPE may
+    contain tokens that start with continuation bytes. This is intentional --
+    it isolates the cost of each individual case.
+
+    Rule1 retains its original behavior, including a UTF-8 well-formedness
+    fallback, because it is a separate research direction.
+    """
+    if strategy == 'rule1':
+        if utf8_symbol_state(pair[0]) == 'prefix' and utf8_symbol_state(pair[1]) == 'suffix':
+            raw = symbol_to_raw_bytes(pair[0])
+            if valid_utf8_char_len(raw, 0) == 0:
+                return 'rule1'
+        if not is_admissible_utf8_symbol("".join(pair)):
+            return 'utf8'
+        return None
+
+    if strategy in STRATEGY_BLOCKED_CASES:
+        blocked_cases = STRATEGY_BLOCKED_CASES[strategy]
+        left = utf8_symbol_state(pair[0])
+        right = utf8_symbol_state(pair[1])
+        if 3 in blocked_cases and left == 'complete' and right == 'prefix':
+            return 'case3'
+        if 4 in blocked_cases and left == 'suffix' and right == 'complete':
+            return 'case4'
+        if 5 in blocked_cases and left == 'suffix' and right == 'prefix':
+            return 'case5'
+        return None
+
+    return None
+
+
+def is_admissible_for_strategy(pair, strategy):
+    """Return True if pair is admissible under the given local-style strategy."""
+    if strategy in LOCAL_STRATEGIES:
+        return get_block_reason(pair, strategy) is None
+    return is_admissible_utf8_pair(pair)
     
 @functools.lru_cache(maxsize=200000)
 def is_valid_utf8_symbol(symbol):
@@ -462,6 +544,7 @@ def open_merge_log(path):
     writer = csv.writer(f)
     writer.writerow([
         'step',
+        'status',
         'selected_language_index',
         'left_symbol',
         'right_symbol',
@@ -474,6 +557,7 @@ def open_merge_log(path):
         'merged_state',
         'merged_valid_utf8',
         'category',
+        'count',
         'selected_frequency',
         'frequency_vector'
     ])
@@ -487,6 +571,7 @@ def write_merge_log(writer, step, max_index, pair, pair_stats):
     info = classify_merge_pair(pair)
     writer.writerow([
         step,
+        'accepted',
         max_index,
         pair[0],
         pair[1],
@@ -499,9 +584,66 @@ def write_merge_log(writer, step, max_index, pair, pair_stats):
         info['merged_state'],
         info['merged_valid'],
         info['category'],
+        1,
         int(pair_stats[max_index]),
         ';'.join(map(str, pair_stats.tolist()))
     ])
+
+
+def buffer_blocked_merge(buffer, pair, freq, blocked_reason):
+    """Accumulate a blocked-merge event into the per-step aggregation buffer.
+
+    Buffer key is (left, right, reason). Value is {'count': N, 'freq': vec}.
+    """
+    if buffer is None:
+        return
+    key = (pair[0], pair[1], blocked_reason)
+    entry = buffer.get(key)
+    if entry is None:
+        buffer[key] = {'count': 1, 'freq': numpy.array(freq, copy=True)}
+    else:
+        entry['count'] += 1
+        entry['freq'] = entry['freq'] + freq
+
+
+def flush_blocked_buffer(writer, step, buffer):
+    """Write one aggregated row per unique (pair, reason) at `step`, then clear buffer.
+
+    Rows are sorted by total frequency descending so the most impactful blocks
+    come first within each step.
+    """
+    if writer is None or buffer is None or not buffer:
+        return
+
+    def total_freq(entry):
+        f = entry['freq']
+        return int(sum(f.tolist() if hasattr(f, 'tolist') else list(f)))
+
+    items = sorted(buffer.items(), key=lambda kv: -total_freq(kv[1]))
+    for (left, right, reason), entry in items:
+        info = classify_merge_pair((left, right))
+        freq = entry['freq']
+        freq_list = freq.tolist() if hasattr(freq, 'tolist') else list(freq)
+        writer.writerow([
+            step,
+            f'blocked_{reason}',
+            -1,
+            left,
+            right,
+            left + right,
+            info['left_hex'],
+            info['right_hex'],
+            info['merged_hex'],
+            info['left_state'],
+            info['right_state'],
+            info['merged_state'],
+            info['merged_valid'],
+            info['category'],
+            entry['count'],
+            int(sum(freq_list)),
+            ';'.join(map(str, freq_list)),
+        ])
+    buffer.clear()
 
 def invalidate_pair(pair, stats, big_stats, indices, array_length):
     """Permanently zero a rejected pair so it is no longer considered for merging."""
@@ -537,7 +679,8 @@ def select_most_frequent_pair(stats, max_index, merge_check_strategy, big_stats,
     return most_frequent
 
 
-def update_pair_statistics(pair, changed, stats, indices, merge_check_strategy='none'):
+def update_pair_statistics(pair, changed, stats, indices, merge_check_strategy='none',
+                           blocked_buffer=None):
     """ Minimally updates the indices and frequency of symbol pairs.
     If we merge a pair of symbols, only pairs that overlap with occurrences
     of this pair are affected, and need to be updated.
@@ -547,6 +690,7 @@ def update_pair_statistics(pair, changed, stats, indices, merge_check_strategy='
         changed (list): A list of changes made, where each change is a tuple containing the index of the word, the new word, the old word, and its frequency.
         stats (defaultdict): A dictionary mapping symbol pairs (tuples) to their frequencies (numpy arrays).
         indices (defaultdict): A dictionary mapping symbol pairs (tuples) to their indices (defaultdicts).
+        blocked_buffer: optional dict for accumulating blocked-pair events at this step (flushed by caller).
     Returns:
         None: The function updates the `stats` and `indices` dictionaries in place.
     """
@@ -592,23 +736,31 @@ def update_pair_statistics(pair, changed, stats, indices, merge_check_strategy='
             # assuming a symbol sequence "A BC D", if "B C" is merged, increase the frequency of "A BC"
             if i:
                 prev = word[i-1:i+1]
-                if merge_check_strategy != 'local' or is_admissible_utf8_pair(prev):
+                reason = get_block_reason(prev, merge_check_strategy) if merge_check_strategy in LOCAL_STRATEGIES else None
+                if reason is None:
                     stats[prev] += freq
                     indices[prev][j] += 1
+                else:
+                    buffer_blocked_merge(blocked_buffer, prev, freq, reason)
             # assuming a symbol sequence "A BC B", if "B C" is merged, increase the frequency of "BC B"
             # however, if the sequence is A BC BC, skip this step because the count of "BC BC" will be incremented by the previous code block
             if i < len(word)-1 and word[i+1] != new_pair:
                 nex = word[i:i+2]
-                if merge_check_strategy != 'local' or is_admissible_utf8_pair(nex):
+                reason = get_block_reason(nex, merge_check_strategy) if merge_check_strategy in LOCAL_STRATEGIES else None
+                if reason is None:
                     stats[nex] += freq
                     indices[nex][j] += 1
+                else:
+                    buffer_blocked_merge(blocked_buffer, nex, freq, reason)
             i += 1
 
 
-def get_pair_statistics(vocab, merge_check_strategy='none'):
+def get_pair_statistics(vocab, merge_check_strategy='none', blocked_buffer=None):
     """ Counts frequency of all symbol pairs, and create index.
     Args:
         vocab (list): A list of tuples, where each tuple contains a word (as a tuple of characters) and its frequency in each language.
+        merge_check_strategy (str): Local strategy name; pairs failing its admissibility are excluded from the pool.
+        blocked_buffer: Optional dict for accumulating step-0 blocked events (flushed by caller).
     Returns:
         tuple: A tuple containing two dictionaries:
             - stats (defaultdict): A dictionary mapping symbol pairs (tuples) to their frequencies (numpy arrays).
@@ -625,9 +777,12 @@ def get_pair_statistics(vocab, merge_check_strategy='none'):
         prev_char = word[0]
         for char in word[1:]:
             pair = (prev_char, char)
-            if merge_check_strategy != 'local' or is_admissible_utf8_pair(pair):
+            reason = get_block_reason(pair, merge_check_strategy) if merge_check_strategy in LOCAL_STRATEGIES else None
+            if reason is None:
                 stats[pair] += freq
                 indices[pair][i] += 1
+            else:
+                buffer_blocked_merge(blocked_buffer, pair, freq, reason)
             prev_char = char
 
     return stats, indices
@@ -728,7 +883,7 @@ def open_file(filename, mode):
         f.close()
 
 
-def preprocess_input_data(infiles, devfiles, is_dict=False, total_symbols=False, num_global=0, num_workers=1, bpe_file=None, merge_check_strategy='none'):
+def preprocess_input_data(infiles, devfiles, is_dict=False, total_symbols=False, num_global=0, num_workers=1, bpe_file=None, merge_check_strategy='none', blocked_buffer=None):
     """ Reads input files and creates vocabulary data structure.
     Args:
         infiles (list[str]): A list of input file paths.
@@ -816,7 +971,7 @@ def preprocess_input_data(infiles, devfiles, is_dict=False, total_symbols=False,
                 dev_vocab[key][i] = dev_vocabs[i].get(key, 0)
 
     sorted_vocab = sorted(vocab.items(), key=lambda x: sum(x[1]), reverse=True)
-    stats, indices = get_pair_statistics(sorted_vocab, merge_check_strategy=merge_check_strategy)
+    stats, indices = get_pair_statistics(sorted_vocab, merge_check_strategy=merge_check_strategy, blocked_buffer=blocked_buffer)
     big_stats = copy.deepcopy(stats)
     if merge_check_strategy == 'rescan':
         invalidate_pairs_globally(stats, big_stats, indices, array_length)
@@ -885,10 +1040,16 @@ def learn_bpe(infiles, outfile, devfiles, num_symbols, min_frequency=2, verbose=
     
     # version numbering allows bckward compatibility
     outfile.write('#version: 0.2\n')
-    dev_vocab, sorted_vocab, stats, indices, big_stats, threshold, lengths, array_length = \
-        preprocess_input_data(infiles, devfiles, is_dict, total_symbols, num_global, num_workers, bpe_file, merge_check_strategy=merge_check_strategy)
 
     merge_log_file, merge_log_writer = open_merge_log(merge_log)
+    blocked_buffer = {} if merge_log_writer is not None else None
+
+    dev_vocab, sorted_vocab, stats, indices, big_stats, threshold, lengths, array_length = \
+        preprocess_input_data(infiles, devfiles, is_dict, total_symbols, num_global, num_workers, bpe_file,
+                              merge_check_strategy=merge_check_strategy, blocked_buffer=blocked_buffer)
+
+    # flush step-0 initial-build blocks before the merge loop starts
+    flush_blocked_buffer(merge_log_writer, 0, blocked_buffer)
 
     if not ratio is None:
         initial_lengths = functools.reduce(numpy.add, [len(key)*value for key, value in sorted_vocab])
@@ -950,18 +1111,23 @@ def learn_bpe(infiles, outfile, devfiles, num_symbols, min_frequency=2, verbose=
             length_change = replace_pair_dict(most_frequent, dev_vocab)
             lengths -= length_change
 
-        update_pair_statistics(most_frequent, changes, stats, indices, merge_check_strategy=merge_check_strategy)
+        update_pair_statistics(most_frequent, changes, stats, indices,
+                               merge_check_strategy=merge_check_strategy,
+                               blocked_buffer=blocked_buffer)
+        # flush step-i update-time blocks after the accepted row was written above
+        flush_blocked_buffer(merge_log_writer, i, blocked_buffer)
+
         if merge_check_strategy == 'rescan':
             invalidate_pairs_globally(stats, big_stats, indices, array_length)
-        
+
         if not i % 100:
             prune_stats(stats, big_stats, threshold)
 
         stats[most_frequent] = numpy.zeros(array_length, dtype=int)
-    
+
     if merge_log_file is not None:
         merge_log_file.close()
-    
+
 
 def select_language_index(lengths, selected_indices, selection_threshold, window_size):
     """ Selects the index of the language with the maximum length from the remaining valid indices.
@@ -1048,10 +1214,15 @@ def learn_bpe_moving_window(infiles, outfile, devfiles, num_symbols, window_size
         # version numbering allows bckward compatibility
         outfile.write('#version: 0.2\n')
 
-    dev_vocab, sorted_vocab, stats, indices, big_stats, threshold, lengths, array_length = \
-        preprocess_input_data(infiles, devfiles, is_dict, total_symbols, num_global, num_workers, bpe_file, merge_check_strategy=merge_check_strategy)
-
     merge_log_file, merge_log_writer = open_merge_log(merge_log)
+    blocked_buffer = {} if merge_log_writer is not None else None
+
+    dev_vocab, sorted_vocab, stats, indices, big_stats, threshold, lengths, array_length = \
+        preprocess_input_data(infiles, devfiles, is_dict, total_symbols, num_global, num_workers, bpe_file,
+                              merge_check_strategy=merge_check_strategy, blocked_buffer=blocked_buffer)
+
+    # flush step-0 initial-build blocks before the merge loop starts
+    flush_blocked_buffer(merge_log_writer, 0, blocked_buffer)
 
     if not ratio is None:
         initial_lengths = functools.reduce(numpy.add, [len(key)*value for key, value in sorted_vocab])
@@ -1121,10 +1292,15 @@ def learn_bpe_moving_window(infiles, outfile, devfiles, num_symbols, window_size
             length_change = replace_pair_dict(most_frequent, dev_vocab)
             lengths -= length_change
 
-        update_pair_statistics(most_frequent, changes, stats, indices, merge_check_strategy=merge_check_strategy)
+        update_pair_statistics(most_frequent, changes, stats, indices,
+                               merge_check_strategy=merge_check_strategy,
+                               blocked_buffer=blocked_buffer)
+        # flush step-i update-time blocks after the accepted row was written above
+        flush_blocked_buffer(merge_log_writer, i, blocked_buffer)
+
         if merge_check_strategy == 'rescan':
             invalidate_pairs_globally(stats, big_stats, indices, array_length)
-        
+
         if not i % 100:
             prune_stats(stats, big_stats, threshold)
 

@@ -1,0 +1,25 @@
+{
+  "phases": [
+    {
+      "n_merges": 2000,
+      "stage": "sub",
+      "merge_rule": "classical"
+    },
+    {
+      "n_merges": 500,
+      "stage": "super",
+      "merge_rule": "classical"
+    }
+  ],
+  "inputs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_mvp.txt"
+  ],
+  "devs": [
+    "C:\\Users\\jrva9\\UZH\\Master\\parity-aware-bpe-rola\\RQ2\\data\\en_dev_mvp.txt"
+  ],
+  "total_merges": 2500,
+  "phase_seconds": [
+    6.927462799940258,
+    25.856668999884278
+  ]
+}

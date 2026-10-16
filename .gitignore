@@ -71,3 +71,12 @@ Thumbs.db
 parallel
 debug*
 old_*.py
+# thesis tidying 2026-10-16
+benchmark_outputs/
+en-th/
+en-zh/
+data_enth/
+superparity/tokeval_export/
+RQ2_different_angle/checkpoints/
+ls
+

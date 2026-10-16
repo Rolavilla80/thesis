@@ -1,0 +1,17 @@
+{
+  "name": "five_language_20k_midpoint",
+  "vocab_size": 20000,
+  "transitions": {
+    "super_vocab": 10000,
+    "parity_vocab": 15000
+  },
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 2000000,
+    "train_dir": "data/train",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "tokens_per_segment", "gini", "worst_best_ratio"],
+  "note": "Do not run until fresh corpora have been placed in this directory."
+}

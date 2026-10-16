@@ -1,0 +1,9 @@
+scale,pair,delta_tok_per_line,ci_low,ci_high,significant,delta_disparity,ci_low_d,ci_high_d,significant_d
+8000,endpoint-vs-p90,0.538,0.502,0.576,YES,0.2341,0.2183,0.25,YES
+8000,endpoint-vs-fair,-0.211,-0.27,-0.156,YES,0.476,0.4522,0.4943,YES
+20000,endpoint-vs-p90,0.354,0.329,0.379,YES,0.1334,0.1191,0.1486,YES
+20000,endpoint-vs-fair,-0.114,-0.163,-0.061,YES,0.3887,0.3732,0.4041,YES
+50000,endpoint-vs-p90,0.124,0.1,0.147,YES,0.0944,0.0825,0.1079,YES
+50000,endpoint-vs-fair,-0.424,-0.467,-0.383,YES,0.2991,0.2886,0.3179,YES
+80000,endpoint-vs-p90,0.109,0.089,0.128,YES,0.0924,0.0863,0.0975,YES
+80000,endpoint-vs-fair,-0.7,-0.739,-0.658,YES,0.2807,0.2641,0.2934,YES

@@ -1,0 +1,16 @@
+{
+  "name": "balanced_2k_parity",
+  "vocab_size": 2000,
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "Balanced local comparator: parity-aware BPE before any SuperBPE transition.",
+  "phases": [
+    {"name": "PAsub", "n_merges": 1744, "stage": "sub", "rule": "parity"}
+  ]
+}

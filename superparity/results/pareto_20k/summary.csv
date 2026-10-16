@@ -1,0 +1,8 @@
+recipe,t1,t2,t1_frac,t2_frac,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,train_seconds
+bpe_super_pa,3000,17800,0.152,0.902,19744,super,43.74,4.5418,1.3172,0.0953,0.0537,hin_Deva,zho_Hans,334.4
+bpe_super_pa,3000,19744,0.152,1.0,19744,super,44.094,4.4779,1.4506,0.128,0.0723,tha_Thai,zho_Hans,0.0
+bpe_super_pa,3000,14800,0.152,0.75,19744,super,43.729,4.59,1.2151,0.0628,0.0347,deu_Latn,zho_Hans,498.0
+bpe_super_pa,3000,5900,0.152,0.299,19744,super,44.344,4.582,1.0642,0.018,0.0094,deu_Latn,zho_Hans,598.1
+bpe_super_pa,3000,11800,0.152,0.598,19744,super,43.991,4.5967,1.1254,0.0364,0.0187,deu_Latn,zho_Hans,614.2
+bpe_super_pa,3000,8900,0.152,0.451,19744,super,44.208,4.5919,1.0619,0.0176,0.0096,deu_Latn,zho_Hans,653.6
+bpe_super_pa,3000,3000,0.152,0.152,19744,super,44.388,4.5776,1.0702,0.0187,0.0098,deu_Latn,zho_Hans,5477.2

@@ -1,23 +1,34 @@
+"""Evaluate BPE merges on a parallel dev set.
+
+Usage:
+    python evaluate_bpe_runs.py --corpus enth --symbols 30000
+    python evaluate_bpe_runs.py --corpus enzh --symbols 10000 --strategies none block3 block5
+    python evaluate_bpe_runs.py --corpus enth --symbols 30000 --no-vocab-dump
+
+Inputs:
+    - Merges:   <merges-dir>/<corpus>_<symbols>_<strategy>.merges
+    - Dev set:  <data-dir>/dev.<lang_a>, <data-dir>/dev.<lang_b>
+                where corpus is a 4-letter name like 'enth' (en + th) or 'enzh' (en + zh).
+
+Outputs:
+    - Summary CSV: <output> (default: benchmark_outputs/bpe_eval_summary_<corpus>_<symbols>.csv)
+    - Per-(run, corpus) vocab dumps unless --no-vocab-dump is set.
+"""
+
+import argparse
 import csv
 import os
-from collections import Counter, defaultdict
+from collections import Counter
 
 from tokenizers.pre_tokenizers import Whitespace, ByteLevel
 from tokenizers import pre_tokenizers
 
-RUNS = {
-    "none":   r"benchmark_outputs\merges.base.enzh.1000.none.newidea.txt",
-    "max":    r"benchmark_outputs\merges.base.enzh.1000.max.newidea.txt",
-    "local":  r"benchmark_outputs\merges.base.enzh.1000.local.newidea.txt",
-    "rescan": r"benchmark_outputs\merges.base.enzh.1000.rescan.newidea.txt",
-}
 
-CORPORA = {
-    "en_dev": r"data_enzh\dev.en",
-    "zh_dev": r"data_enzh\dev.zh",
-}
+DEFAULT_STRATEGIES = [
+    "none", "block3", "block4", "block5",
+    "block34", "block35", "block45", "block345",
+]
 
-OUTPUT_CSV = r"benchmark_outputs\bpe_eval_summary_newidea.csv"
 
 pre_tokenizer = pre_tokenizers.Sequence([
     Whitespace(),
@@ -47,11 +58,11 @@ def get_bytelevel_char_to_byte():
 BYTE_DECODER = get_bytelevel_char_to_byte()
 
 
-def symbol_to_raw_bytes(symbol: str) -> bytes:
+def symbol_to_raw_bytes(symbol):
     return bytes(BYTE_DECODER[ch] for ch in symbol)
 
 
-def valid_utf8_char_len(raw: bytes, i: int) -> int:
+def valid_utf8_char_len(raw, i):
     for length in (1, 2, 3, 4):
         if i + length <= len(raw):
             try:
@@ -62,10 +73,8 @@ def valid_utf8_char_len(raw: bytes, i: int) -> int:
     return 0
 
 
-def is_valid_utf8_char_prefix(raw: bytes) -> bool:
-    """
-    True iff raw is a proper prefix of exactly one UTF-8 character.
-    """
+def is_valid_utf8_char_prefix(raw):
+    """True iff raw is a proper prefix of exactly one UTF-8 character."""
     n = len(raw)
     if n == 0 or n > 3:
         return False
@@ -117,11 +126,11 @@ def is_valid_utf8_char_prefix(raw: bytes) -> bool:
     return False
 
 
-def utf8_symbol_state(symbol: str) -> str:
+def utf8_symbol_state(symbol):
     """
     complete = valid UTF-8 string
-    prefix   = full UTF-8 chars plus one unfinished char prefix at the end
-    invalid  = broken structure
+    prefix   = full UTF-8 chars plus one unfinished char lead at the end
+    suffix   = starts with a continuation byte (cannot start a character)
     """
     raw = symbol_to_raw_bytes(symbol)
 
@@ -132,7 +141,7 @@ def utf8_symbol_state(symbol: str) -> str:
             i += length
             continue
 
-        return "prefix" if is_valid_utf8_char_prefix(raw[i:]) else "invalid"
+        return "prefix" if is_valid_utf8_char_prefix(raw[i:]) else "suffix"
 
     return "complete"
 
@@ -140,7 +149,7 @@ def utf8_symbol_state(symbol: str) -> str:
 # -----------------------------
 # BPE helpers
 # -----------------------------
-def load_bpe_ranks(merges_path: str):
+def load_bpe_ranks(merges_path):
     with open(merges_path, "r", encoding="utf-8") as f:
         lines = [line.rstrip("\n") for line in f]
 
@@ -159,7 +168,7 @@ def load_bpe_ranks(merges_path: str):
     return {pair: rank for rank, pair in enumerate(merges)}
 
 
-def apply_bpe_to_pretoken(piece: str, bpe_ranks: dict):
+def apply_bpe_to_pretoken(piece, bpe_ranks):
     word = list(piece)
     if len(word) <= 1:
         return word
@@ -197,7 +206,7 @@ def apply_bpe_to_pretoken(piece: str, bpe_ranks: dict):
 # -----------------------------
 # Evaluation
 # -----------------------------
-def evaluate_run_on_corpus(merges_path: str, corpus_path: str):
+def evaluate_run_on_corpus(merges_path, corpus_path):
     bpe_ranks = load_bpe_ranks(merges_path)
 
     total_chars = 0
@@ -244,78 +253,183 @@ def evaluate_run_on_corpus(merges_path: str, corpus_path: str):
         "unique_token_types": len(unique_tokens),
         "unique_complete": type_counter["complete"],
         "unique_prefix": type_counter["prefix"],
-        "unique_invalid": type_counter["invalid"],
+        "unique_suffix": type_counter["suffix"],
 
         "token_occ_complete": occ_counter["complete"],
         "token_occ_prefix": occ_counter["prefix"],
-        "token_occ_invalid": occ_counter["invalid"],
+        "token_occ_suffix": occ_counter["suffix"],
+
+        "_token_occurrences": token_occurrences,
     }
 
 
+def dump_vocab(token_occurrences, out_path):
+    rows = []
+    for tok, count in token_occurrences.items():
+        rows.append({
+            "token": tok,
+            "hex": symbol_to_raw_bytes(tok).hex(" ").upper(),
+            "state": utf8_symbol_state(tok),
+            "occurrences": count,
+        })
+    rows.sort(key=lambda r: -r["occurrences"])
+    with open(out_path, "w", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=["token", "hex", "state", "occurrences"])
+        writer.writeheader()
+        writer.writerows(rows)
+    print(f"  vocab -> {out_path}")
+
+
+# -----------------------------
+# Configuration
+# -----------------------------
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Evaluate BPE merges on a parallel dev set.",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--corpus", required=True,
+        help="Corpus name (4-letter), e.g. 'enth' (en + th), 'enzh' (en + zh). "
+             "Used to derive paths: data_<corpus>/dev.<lang> and "
+             "<merges-dir>/<corpus>_<symbols>_<strategy>.merges.",
+    )
+    parser.add_argument(
+        "--symbols", type=int, required=True,
+        help="Number of BPE merges (e.g. 10000, 30000).",
+    )
+    parser.add_argument(
+        "--strategies", nargs="+", default=DEFAULT_STRATEGIES,
+        help=f"Strategies to evaluate (default: {' '.join(DEFAULT_STRATEGIES)}).",
+    )
+    parser.add_argument(
+        "--output", default=None,
+        help="Output summary CSV "
+             "(default: benchmark_outputs/bpe_eval_summary_<corpus>_<symbols>.csv).",
+    )
+    parser.add_argument(
+        "--data-dir", default=None,
+        help="Directory containing dev.<lang> files (default: data_<corpus>).",
+    )
+    parser.add_argument(
+        "--merges-dir", default="benchmark_outputs",
+        help="Directory containing .merges files (default: benchmark_outputs).",
+    )
+    parser.add_argument(
+        "--no-vocab-dump", action="store_true",
+        help="Skip per-(run, corpus) vocab dump CSVs.",
+    )
+    return parser.parse_args()
+
+
+def derive_corpus_paths(corpus, data_dir_override):
+    if len(corpus) != 4:
+        raise ValueError(
+            f"Expected a 4-character corpus name like 'enth' or 'enzh', got '{corpus}'."
+        )
+    lang_a, lang_b = corpus[:2], corpus[2:]
+    data_dir = data_dir_override or f"data_{corpus}"
+    return {
+        f"{lang_a}_dev": os.path.join(data_dir, f"dev.{lang_a}"),
+        f"{lang_b}_dev": os.path.join(data_dir, f"dev.{lang_b}"),
+    }
+
+
+def derive_merge_paths(strategies, corpus, symbols, merges_dir):
+    return {
+        strat: os.path.join(merges_dir, f"{corpus}_{symbols}_{strat}.merges")
+        for strat in strategies
+    }
+
+
+# -----------------------------
+# Main
+# -----------------------------
 def main():
+    args = parse_args()
+
+    runs = derive_merge_paths(args.strategies, args.corpus, args.symbols, args.merges_dir)
+    corpora = derive_corpus_paths(args.corpus, args.data_dir)
+    output_csv = args.output or os.path.join(
+        "benchmark_outputs", f"bpe_eval_summary_{args.corpus}_{args.symbols}.csv"
+    )
+
+    print(f"Strategies: {list(runs.keys())}")
+    print(f"Corpora:    {list(corpora.keys())}")
+    print(f"Output:     {output_csv}")
+    print()
+
     rows = []
 
-    for run_name, merges_path in RUNS.items():
+    for run_name, merges_path in runs.items():
         if not os.path.exists(merges_path):
-            print(f"Missing merges file: {merges_path}")
+            print(f"Missing merges file: {merges_path} -- skipping {run_name}")
             continue
 
-        for corpus_name, corpus_path in CORPORA.items():
+        print(f"=== {run_name} ({merges_path}) ===")
+
+        per_corpus = {}
+        for corpus_name, corpus_path in corpora.items():
             if not os.path.exists(corpus_path):
-                print(f"Missing corpus file: {corpus_path}")
+                print(f"  missing corpus file: {corpus_path}")
                 continue
 
             result = evaluate_run_on_corpus(merges_path, corpus_path)
+
+            if not args.no_vocab_dump:
+                vocab_out = os.path.join(
+                    "benchmark_outputs",
+                    f"vocab_{args.corpus}_{args.symbols}_{run_name}_{corpus_name}.csv",
+                )
+                dump_vocab(result["_token_occurrences"], vocab_out)
+
+            per_corpus[corpus_name] = result
+
             row = {
                 "run": run_name,
                 "corpus": corpus_name,
-                **result
+                **{k: v for k, v in result.items() if k != "_token_occurrences"},
             }
             rows.append(row)
 
-        combined = defaultdict(float)
-        combined["run"] = run_name
-        combined["corpus"] = "combined"
-
-        tmp_results = []
-        for corpus_name, corpus_path in CORPORA.items():
-            if os.path.exists(corpus_path):
-                tmp_results.append(evaluate_run_on_corpus(merges_path, corpus_path))
-
-        if tmp_results:
-            combined["total_chars"] = sum(r["total_chars"] for r in tmp_results)
-            combined["total_final_tokens"] = sum(r["total_final_tokens"] for r in tmp_results)
+        if per_corpus:
+            combined = {
+                "run": run_name,
+                "corpus": "combined",
+                "total_chars": sum(r["total_chars"] for r in per_corpus.values()),
+                "total_final_tokens": sum(r["total_final_tokens"] for r in per_corpus.values()),
+                "unique_token_types": "",
+                "unique_complete": "",
+                "unique_prefix": "",
+                "unique_suffix": "",
+                "token_occ_complete": sum(r["token_occ_complete"] for r in per_corpus.values()),
+                "token_occ_prefix": sum(r["token_occ_prefix"] for r in per_corpus.values()),
+                "token_occ_suffix": sum(r["token_occ_suffix"] for r in per_corpus.values()),
+            }
             combined["tokens_per_char"] = (
                 combined["total_final_tokens"] / combined["total_chars"]
                 if combined["total_chars"] else 0.0
             )
-
-            combined["unique_token_types"] = ""
-            combined["unique_complete"] = ""
-            combined["unique_prefix"] = ""
-            combined["unique_invalid"] = ""
-
-            combined["token_occ_complete"] = sum(r["token_occ_complete"] for r in tmp_results)
-            combined["token_occ_prefix"] = sum(r["token_occ_prefix"] for r in tmp_results)
-            combined["token_occ_invalid"] = sum(r["token_occ_invalid"] for r in tmp_results)
-
-            rows.append(dict(combined))
+            rows.append(combined)
 
     fieldnames = [
         "run", "corpus",
         "total_chars", "total_final_tokens", "tokens_per_char",
-        "unique_token_types", "unique_complete", "unique_prefix", "unique_invalid",
-        "token_occ_complete", "token_occ_prefix", "token_occ_invalid",
+        "unique_token_types", "unique_complete", "unique_prefix", "unique_suffix",
+        "token_occ_complete", "token_occ_prefix", "token_occ_suffix",
     ]
 
-    with open(OUTPUT_CSV, "w", encoding="utf-8", newline="") as f:
+    output_dir = os.path.dirname(output_csv)
+    if output_dir:
+        os.makedirs(output_dir, exist_ok=True)
+
+    with open(output_csv, "w", encoding="utf-8", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=fieldnames)
         writer.writeheader()
         writer.writerows(rows)
 
-    print(f"Saved summary to {OUTPUT_CSV}")
-    for row in rows:
-        print(row)
+    print()
+    print(f"Saved summary to {output_csv}")
 
 
 if __name__ == "__main__":

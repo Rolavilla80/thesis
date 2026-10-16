@@ -1,0 +1,19 @@
+{
+  "name": "commit_mode_80k_super_t40000_1mb",
+  "vocab_size": 80000,
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "pretokenizer": "commit_bytelevel",
+  "parity_reference": "phase",
+  "data_contract": {
+    "train_bytes_per_language": 1000000,
+    "train_dir": "data/train_1mb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "80k SuperBPE control on the balanced 1 MB/language corpus.",
+  "phases": [
+    {"name": "Csub", "n_merges": 39744, "stage": "sub", "rule": "classical"},
+    {"name": "Csuper", "n_merges": 40000, "stage": "super", "rule": "classical"}
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "base_config": "configs/pilot_2k_balanced.json",
+  "description": "A compact cross-shaped transition sweep around tSuper=1,000 and tParity=1,500.",
+  "conditions": [
+    {"name": "balanced_2k_two_transition_t1000_t1000", "super_vocab": 1000, "parity_vocab": 1000},
+    {"name": "balanced_2k_two_transition_t1000_t1200", "super_vocab": 1000, "parity_vocab": 1200},
+    {"name": "balanced_2k_two_transition_t1000_t1800", "super_vocab": 1000, "parity_vocab": 1800},
+    {"name": "balanced_2k_two_transition_t600_t1500", "super_vocab": 600, "parity_vocab": 1500},
+    {"name": "balanced_2k_two_transition_t1400_t1500", "super_vocab": 1400, "parity_vocab": 1500}
+  ]
+}

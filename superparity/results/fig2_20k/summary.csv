@@ -1,0 +1,6 @@
+recipe,transition,total_merges,final_stage,mean_tokens_per_line,mean_bytes_per_token,disparity_ratio,cv,gini,worst_language,best_language,train_seconds
+superbpe,3000,19744,super,44.094,4.4779,1.4506,0.128,0.0723,tha_Thai,zho_Hans,8877.8
+superbpe,2500,19744,super,44.112,4.4762,1.4516,0.128,0.0723,tha_Thai,zho_Hans,9106.9
+superbpe,2000,19744,super,44.077,4.4792,1.4521,0.1281,0.0724,tha_Thai,zho_Hans,9343.7
+superbpe,1500,19744,super,44.093,4.4779,1.4513,0.1282,0.0724,tha_Thai,zho_Hans,9569.8
+superbpe,1000,19744,super,44.146,4.473,1.4517,0.1278,0.0722,tha_Thai,zho_Hans,9776.8

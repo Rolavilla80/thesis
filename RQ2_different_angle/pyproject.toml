@@ -1,0 +1,13 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rq2-different-angle"
+version = "0.1.0"
+description = "Standalone SuperBPE × parity-aware BPE intrinsic experiments"
+requires-python = ">=3.11"
+dependencies = ["regex>=2024.0.0", "datasets>=3.0.0", "tokenizers>=0.20.0"]
+
+[tool.setuptools.packages.find]
+where = ["src"]

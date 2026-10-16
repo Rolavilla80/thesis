@@ -1,0 +1,19 @@
+{
+  "name": "commit_mode_80k_dual_t40000_t70000_1mb",
+  "vocab_size": 80000,
+  "transitions": {
+    "super_vocab": 40000,
+    "parity_vocab": 70000
+  },
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "pretokenizer": "commit_bytelevel",
+  "parity_reference": "phase",
+  "data_contract": {
+    "train_bytes_per_language": 1000000,
+    "train_dir": "data/train_1mb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "80k parity-transition sweep: late parity at tParity=70,000."
+}

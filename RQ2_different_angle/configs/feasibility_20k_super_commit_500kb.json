@@ -1,0 +1,19 @@
+{
+  "name": "commit_mode_20k_super_t10000_500kb",
+  "vocab_size": 20000,
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "pretokenizer": "commit_bytelevel",
+  "parity_reference": "phase",
+  "data_contract": {
+    "train_bytes_per_language": 500000,
+    "train_dir": "data/train_500kb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "20k feasibility control on the balanced 500 KB/language corpus.",
+  "phases": [
+    {"name": "Csub", "n_merges": 9744, "stage": "sub", "rule": "classical"},
+    {"name": "Csuper", "n_merges": 10000, "stage": "super", "rule": "classical"}
+  ]
+}

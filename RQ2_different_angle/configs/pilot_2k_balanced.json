@@ -1,0 +1,17 @@
+{
+  "name": "balanced_2k_two_transition_t1000_t1500",
+  "vocab_size": 2000,
+  "transitions": {
+    "super_vocab": 1000,
+    "parity_vocab": 1500
+  },
+  "languages": ["eng_Latn", "rus_Cyrl", "tur_Latn", "zho_Hans", "tha_Thai"],
+  "data_contract": {
+    "train_bytes_per_language": 100000,
+    "train_dir": "data/train_100kb_balanced",
+    "parallel_dev_dir": "data/dev",
+    "parallel_eval_dir": "data/eval"
+  },
+  "metrics": ["bytes_per_token", "compression_gini", "segment_workload_gini"],
+  "note": "Balanced local pilot. Transition locations scale the 40% / 60% vocabulary intuition."
+}

@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+
+# Downloaded corpora and generated experiment artifacts stay local.
+data/*/
+!data/.gitkeep
+!data/*/.gitkeep
+results/*/
+!results/.gitkeep
+checkpoints/
