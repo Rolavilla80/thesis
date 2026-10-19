@@ -1,0 +1,28 @@
+
+===== tha_thai / bytes_gpt4o_cbg_relaxed   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 276,544,230
+  starts with a mark (any)                   19 types |     2,884,741 events ( 1.04%) | still standing at end:    17,205 | first: rank 37 'ี่'
+    marks-only  (tolerated)                  19 types |     2,884,741 events ( 1.04%) | still standing at end:    17,205 | first: rank 37 'ี่'
+    TARGET mark-tail + next grapheme          0 types
+  single Thai letters+marks assembled as tokens: 72; last one at rank 52532 '๎'; assembled before the first TARGET token: 0
+
+===== hin_deva / bytes_gpt4o_cbg_relaxed   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 271,468,978
+  starts with a mark (any)                   33 types |     1,751,639 events ( 0.65%) | still standing at end:    14,892 | first: rank 33 'ें'
+    marks-only  (tolerated)                  33 types |     1,751,639 events ( 0.65%) | still standing at end:    14,892 | first: rank 33 'ें'
+    TARGET mark-tail + next grapheme          0 types
+  single Devanagari letters+marks assembled as tokens: 78; last one at rank 61356 'ॸ'; assembled before the first TARGET token: 0
+
+===== pan_guru / bytes_gpt4o_cbg_relaxed   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 272,274,415
+  starts with a mark (any)                   40 types |     3,306,521 events ( 1.21%) | still standing at end:    16,094 | first: rank 38 'ਾਂ'
+    marks-only  (tolerated)                  40 types |     3,306,521 events ( 1.21%) | still standing at end:    16,094 | first: rank 38 'ਾਂ'
+    TARGET mark-tail + next grapheme          0 types
+  single Gurmukhi letters+marks assembled as tokens: 63; last one at rank 38571 'ਁ'; assembled before the first TARGET token: 0
+
+===== arb_arab / bytes_gpt4o_cbg_relaxed   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 260,879,049
+  starts with a mark (any)                    9 types |        81,845 events ( 0.03%) | still standing at end:    29,809 | first: rank 328 'َّ'
+    marks-only  (tolerated)                   9 types |        81,845 events ( 0.03%) | still standing at end:    29,809 | first: rank 328 'َّ'
+    TARGET mark-tail + next grapheme          0 types
+  single Arabic letters+marks assembled as tokens: 113; last one at rank 63336 'ﺻ'; assembled before the first TARGET token: 0

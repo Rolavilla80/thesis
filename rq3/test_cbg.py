@@ -65,6 +65,32 @@ for label, text in [("R2 'क्' (conjunct cut)", "क्"), ("R2 word-final vi
     fails += not ok
     print(f"  {'PASS' if ok else 'FAIL'}  {label}: cbg={a} novirama={b} (expected True/False)")
 
+# relaxed mode (added 2026-10-18, supervisor's formulation): reject ONLY "starts inside a grapheme AND
+# continues into the next one"; marks-only tails and every right-edge case are tolerated.
+rel = get_pretokenizer("bytes_gpt4o_cbg_relaxed")
+REL_CASES = [
+    ("relaxed: 'ิน' mark-tail + next grapheme", "ิน", True),
+    ("relaxed: '่า'", "่า", True),
+    ("relaxed: 'ี่ก' two marks + next grapheme", "ี่ก", True),
+    ("relaxed: ' ัน' space+mark+next grapheme", " ัน", True),
+    ("relaxed: Devanagari 'ार'", "ार", True),
+    ("relaxed: virama-start '्र' (crosses into र)", "्र", True),
+    ("relaxed: Arabic 'ًا'", "ًا", True),
+    ("relaxed: marks-only 'ี่' TOLERATED", "ี่", False),
+    ("relaxed: marks-only ' ี่' after space TOLERATED", " ี่", False),
+    ("relaxed: single mark '่' ok", "่", False),
+    ("relaxed: prefix 'ที' ok (ends mid-cluster)", "ที", False),
+    ("relaxed: virama-end 'क्' ok (right edge not policed)", "क्", False),
+    ("relaxed: ZWJ-end ok (right edge not policed)", "👨" + ZWJ, False),
+    ("relaxed: odd RI 'a🇹' ok (right edge not policed)", "a🇹", False),
+    ("relaxed: whole word 'กิน' ok", "กิน", False),
+]
+for label, text, want in REL_CASES:
+    got = rel.violates_grapheme_policy(text)
+    ok = got == want
+    fails += not ok
+    print(f"  {'PASS' if ok else 'FAIL'}  {label}: violates={got} (expected {want})")
+
 # integration: the rule fires through token_allowed on BOTH encodings
 for pt, name in [(cbg, "bytes_cbg"), (scbg, "script_cbg")]:
     seq_bad = [t for e in pt.encode_text("ิน") for t in e.atomic_token_ids]
@@ -78,7 +104,10 @@ h = get_pretokenizer("bytes_gpt4o_cb").hash()
 ok = h == "PT-ca6443c4"
 fails += not ok
 print(f"  {'PASS' if ok else 'FAIL'}  bytes_gpt4o_cb hash unchanged: {h} (expected PT-ca6443c4)")
-print(f"  new cbg hashes: bytes={cbg.hash()}  script={scbg.hash()}  novirama={nov.hash()}")
+for name, pt, want in [("bytes_gpt4o_cbg", cbg, "PT-24c9269b"), ("scriptenc_gpt4o_cbg", scbg, "PT-f95ee7cb"), ("bytes_gpt4o_cbg_novirama", nov, "PT-7ab96d26")]:
+    h = pt.hash(); ok = h == want; fails += not ok
+    print(f"  {'PASS' if ok else 'FAIL'}  {name} hash unchanged after relaxed-mode addition: {h} (expected {want})")
+print(f"  relaxed hash (new): {rel.hash()}")
 
 print(f"\n{'ALL PASS' if fails == 0 else f'{fails} FAILURES'}")
 sys.exit(1 if fails else 0)

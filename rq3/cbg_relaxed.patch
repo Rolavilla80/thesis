@@ -1,0 +1,63 @@
+diff --git a/script_bpe/pretokenize/__init__.py b/script_bpe/pretokenize/__init__.py
+index 3fea0a4..e55ebc4 100644
+--- a/script_bpe/pretokenize/__init__.py
++++ b/script_bpe/pretokenize/__init__.py
+@@ -44,6 +44,9 @@ PRETOKENIZER_REGISTRY: dict[str, PretokenizerConfig] = {
+     "bytes_gpt4o_cbg_novirama": UTF8PretokenizerConfig(
+         regex_pattern=GPT4O_REGEX, enforce_grapheme=True, grapheme_block_virama_end=False
+     ),
++    "bytes_gpt4o_cbg_relaxed": UTF8PretokenizerConfig(
++        regex_pattern=GPT4O_REGEX, enforce_grapheme=True, grapheme_mode="relaxed"
++    ),
+     "bytes_nosplit_cb": UTF8PretokenizerConfig(regex_pattern=None),
+     # Backward-compatible alias names expected by tests
+     "bytes_nosplit_cbi": UTF8PretokenizerConfig(regex_pattern=None, enforce_inherited=True),
+diff --git a/script_bpe/pretokenize/pretokenizer.py b/script_bpe/pretokenize/pretokenizer.py
+index 26e6eda..c0fd0e6 100644
+--- a/script_bpe/pretokenize/pretokenizer.py
++++ b/script_bpe/pretokenize/pretokenizer.py
+@@ -10,6 +10,8 @@ import json
+ from script_bpe.utils import InputTokenSeq, PretokenizedT, token_array, DigitHandlingT, TokenPairT
+ from script_bpe.pretokenize.scriptencoding import ScriptConfig, ScriptEncodingV1, ScriptBlock, unicode_script_map
+ 
++_GRAPHEME_RE = re.compile(r"\X")  # extended grapheme clusters (UAX #29); used by the relaxed grapheme mode
++
+ # consolidated in utils
+ 
+ 
+@@ -28,6 +30,10 @@ class PretokenizerConfig(BaseModel):
+     enforce_inherited: bool = False
+     enforce_grapheme: bool = False  # type-level grapheme-cluster rules (L1/L2, R1-R5)
+     grapheme_block_virama_end: bool = True  # R2 toggle: block tokens ending in InCB=Linker
++    # "strict" = L1/L2 + R1-R5 as above. "relaxed" = supervisor's formulation only: a token may not START
++    # inside a grapheme (mark/ZWJ/jamo-V/T first) AND continue into the next one (2+ clusters);
++    # marks-only tails ('ี่') and all right-edge cases (prefixes, virama-end) are tolerated.
++    grapheme_mode: Literal["strict", "relaxed"] = "strict"
+     # disallow extra fields
+     model_config = ConfigDict(extra="forbid")
+ 
+@@ -158,6 +164,8 @@ class Pretokenizer:
+         if not dumped.get("enforce_grapheme", False):
+             dumped.pop("enforce_grapheme", None)
+             dumped.pop("grapheme_block_virama_end", None)
++        if dumped.get("grapheme_mode", "strict") == "strict":  # added later; keep existing cbg hashes stable too
++            dumped.pop("grapheme_mode", None)
+         h.update(json.dumps(dumped, sort_keys=True).encode("utf-8"))
+         return "PT-" + h.hexdigest()[:8]
+ 
+@@ -244,6 +252,15 @@ class Pretokenizer:
+             return False
+         g = self.grapheme_sets
+         stripped = text.lstrip()
++        if self.config.grapheme_mode == "relaxed":
++            # Relaxed: reject only "starts inside a grapheme AND crosses into the next one".
++            # Leading marks form one degenerate cluster under \X; a 2nd cluster means the token
++            # continues into the next grapheme (ิน, ่า, ี่ก). One cluster = bare tail (ี่): tolerated.
++            if not stripped:
++                return False
++            c = stripped[0]
++            starts_inside = c == "‍" or c in g["ext"] or c in g["spm"] or c in g["hv"] or c in g["ht"]
++            return starts_inside and len(_GRAPHEME_RE.findall(stripped)) >= 2
+         if stripped:
+             c = stripped[0]
+             if c == "‍" or c in g["ext"] or c in g["spm"]:  # L1
