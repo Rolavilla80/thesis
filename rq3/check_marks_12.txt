@@ -1,0 +1,248 @@
+
+===== arb_arab / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 260,978,284
+  starts with a mark (any)                  779 types |       703,187 events ( 0.27%) | still standing at end:   352,466 | first: rank 180 'ًا'
+    marks-only  (tolerated)                   9 types |        78,663 events ( 0.03%) | still standing at end:    18,910 | first: rank 329 'َّ'
+    TARGET mark-tail + next grapheme        770 types |       624,524 events ( 0.24%) | still standing at end:   333,556 | first: rank 180 'ًا'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      'ًا'       rank    180   created    108,218   still standing   39,891
+      'ّة'       rank    566   created     26,484   still standing   12,880
+      'َل'       rank   1119   created     12,151   still standing    3,182
+      'ِي'       rank   1124   created     12,109   still standing    3,691
+      'َن'       rank   1201   created     11,005   still standing    1,898
+      'ّا'       rank   1429   created      9,163   still standing    2,314
+      'ِن'       rank   1531   created      8,419   still standing    1,267
+      'َا'       rank   1557   created      8,237   still standing    1,924
+      'َر'       rank   1608   created      7,977   still standing    3,153
+      'َم'       rank   1651   created      7,707   still standing    2,977
+      'َي'       rank   1661   created      7,654   still standing    1,546
+      'ّل'       rank   1762   created      7,149   still standing    2,440
+      'ّر'       rank   1763   created      7,141   still standing    3,125
+      'َة'       rank   1822   created      6,817   still standing    1,802
+      'َب'       rank   1944   created      6,346   still standing    2,549
+  top 10 TARGET tokens still standing at the end of training:
+      'ًا'       rank    180   created    108,218   still standing   39,891
+      'ّة'       rank    566   created     26,484   still standing   12,880
+      'ِي'       rank   1124   created     12,109   still standing    3,691
+      'َّة'      rank   2312   created      5,152   still standing    3,365
+      'َل'       rank   1119   created     12,151   still standing    3,182
+      'َر'       rank   1608   created      7,977   still standing    3,153
+      'ّر'       rank   1763   created      7,141   still standing    3,125
+      'ّي'       rank   2881   created      3,968   still standing    3,124
+      'َم'       rank   1651   created      7,707   still standing    2,977
+      'ّد'       rank   2290   created      5,219   still standing    2,701
+  single Arabic letters+marks assembled as tokens: 113; last one at rank 63000 'ﺻ'; assembled before the first TARGET token: 36
+
+===== deu_latn / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 240,045,126
+  starts with a mark (any)                    0 types
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          0 types
+  single Latin letters+marks assembled as tokens: 61; last one at rank 63978 'ì'; assembled before the first TARGET token: 0
+
+===== eng_latn / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 236,299,738
+  starts with a mark (any)                    0 types
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          0 types
+  single Latin letters+marks assembled as tokens: 86; last one at rank 63350 'Þ'; assembled before the first TARGET token: 0
+
+===== heb_hebr / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 258,435,661
+  starts with a mark (any)                  377 types |       309,869 events ( 0.12%) | still standing at end:   107,458 | first: rank 766 'ְּ'
+    marks-only  (tolerated)                  38 types |       100,548 events ( 0.04%) | still standing at end:    12,124 | first: rank 766 'ְּ'
+    TARGET mark-tail + next grapheme        339 types |       209,321 events ( 0.08%) | still standing at end:    95,334 | first: rank 1055 'ָה'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      'ָה'       rank   1055   created     12,198   still standing    3,041
+      'ִי'       rank   1431   created      8,607   still standing    2,250
+      'ָא'       rank   1507   created      8,133   still standing    1,935
+      'ַי'       rank   2058   created      5,504   still standing    1,245
+      'ִים'      rank   2065   created      5,485   still standing    2,003
+      'ַל'       rank   2150   created      5,248   still standing      956
+      'ֵי'       rank   2183   created      5,167   still standing    1,921
+      'ַת'       rank   2323   created      4,800   still standing    1,474
+      'ּוֹ'      rank   2524   created      4,396   still standing    1,148
+      'ֹת'       rank   2527   created      4,392   still standing      805
+      'ָר'       rank   2789   created      3,893   still standing    1,209
+      'ְר'       rank   2983   created      3,598   still standing      701
+      'ִּי'      rank   3015   created      3,540   still standing      751
+      'ָל'       rank   3457   created      3,019   still standing      902
+      'ֶה'       rank   3511   created      2,965   still standing    1,038
+  top 10 TARGET tokens still standing at the end of training:
+      'ָה'       rank   1055   created     12,198   still standing    3,041
+      'ִי'       rank   1431   created      8,607   still standing    2,250
+      'ִים'      rank   2065   created      5,485   still standing    2,003
+      'ָא'       rank   1507   created      8,133   still standing    1,935
+      'ֵי'       rank   2183   created      5,167   still standing    1,921
+      'ִין'      rank   4448   created      2,239   still standing    1,564
+      'ַת'       rank   2323   created      4,800   still standing    1,474
+      'ַי'       rank   2058   created      5,504   still standing    1,245
+      'ּוּ'      rank   3691   created      2,789   still standing    1,221
+      'ָר'       rank   2789   created      3,893   still standing    1,209
+  single Hebrew letters+marks assembled as tokens: 67; last one at rank 60040 'ֺ'; assembled before the first TARGET token: 36
+
+===== hin_deva / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 271,538,240
+  starts with a mark (any)                 2486 types |    11,862,840 events ( 4.37%) | still standing at end:   304,052 | first: rank 33 'ें'
+    marks-only  (tolerated)                  35 types |     1,708,293 events ( 0.63%) | still standing at end:    21,082 | first: rank 33 'ें'
+    TARGET mark-tail + next grapheme       2451 types |    10,154,547 events ( 3.74%) | still standing at end:   282,970 | first: rank 34 'ार'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      'ार'       rank     34   created    907,636   still standing    2,002
+      '्र'       rank     41   created    851,714   still standing    2,068
+      '्य'       rank     84   created    367,250   still standing    2,086
+      'ान'       rank     85   created    364,165   still standing    2,040
+      'िक'       rank     86   created    343,922   still standing    3,514
+      'ाल'       rank     94   created    297,453   still standing    1,763
+      'िल'       rank    103   created    254,885   still standing    1,872
+      'िए'       rank    106   created    238,822   still standing    1,094
+      'ित'       rank    109   created    228,833   still standing    3,390
+      'िय'       rank    123   created    187,112   still standing    1,512
+      'िया'      rank    125   created    183,292   still standing    4,532
+      'ंग'       rank    128   created    171,365   still standing    2,728
+      'िन'       rank    146   created    138,460   still standing    2,814
+      '्या'      rank    147   created    137,459   still standing    1,232
+      'ोग'       rank    149   created    135,345   still standing      664
+  top 10 TARGET tokens still standing at the end of training:
+      'िंग'      rank    323   created     42,500   still standing    5,212
+      'िया'      rank    125   created    183,292   still standing    4,532
+      'ियों'     rank    206   created     77,734   still standing    4,497
+      'िक'       rank     86   created    343,922   still standing    3,514
+      'ित'       rank    109   created    228,833   still standing    3,390
+      '्स'       rank    428   created     30,206   still standing    3,329
+      'ियां'     rank    740   created     14,884   still standing    2,855
+      'िन'       rank    146   created    138,460   still standing    2,814
+      'ंग'       rank    128   created    171,365   still standing    2,728
+      'ियाँ'     rank   1485   created      6,409   still standing    2,409
+  single Devanagari letters+marks assembled as tokens: 78; last one at rank 62305 'ॸ'; assembled before the first TARGET token: 24
+
+===== jpn_jpan / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 253,500,650
+  starts with a mark (any)                    2 types |           492 events ( 0.00%) | still standing at end:       492 | first: rank 22902 'ﾞｰ'
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          2 types |           492 events ( 0.00%) | still standing at end:       492 | first: rank 22902 'ﾞｰ'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      'ﾞｰ'       rank  22902   created        380   still standing      380
+      'ﾟДﾟ'      rank  58520   created        112   still standing      112
+  top 10 TARGET tokens still standing at the end of training:
+      'ﾞｰ'       rank  22902   created        380   still standing      380
+      'ﾟДﾟ'      rank  58520   created        112   still standing      112
+  single Han/Hiragana/Katakana letters+marks assembled as tokens: 3013; last one at rank 63759 '拮'; assembled before the first TARGET token: 2372
+
+===== kor_hang / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 248,745,430
+  starts with a mark (any)                    0 types
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          0 types
+  single Han/Hangul letters+marks assembled as tokens: 2065; last one at rank 63950 '넵'; assembled before the first TARGET token: 0
+
+===== pan_guru / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 272,358,406
+  starts with a mark (any)                 2422 types |    12,879,246 events ( 4.73%) | still standing at end:   231,320 | first: rank 38 'ਾਂ'
+    marks-only  (tolerated)                  41 types |     3,206,909 events ( 1.18%) | still standing at end:    18,141 | first: rank 38 'ਾਂ'
+    TARGET mark-tail + next grapheme       2381 types |     9,672,337 events ( 3.55%) | still standing at end:   213,179 | first: rank 45 'ਾਰ'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      'ਾਰ'       rank     45   created    920,012   still standing    1,342
+      'ਾਲ'       rank     58   created    627,897   still standing    1,593
+      'ਿਆ'       rank     61   created    606,349   still standing    4,643
+      'ਾਨ'       rank     76   created    400,105   still standing    1,634
+      '੍ਰ'       rank     80   created    384,249   still standing    1,468
+      'ੱਚ'       rank     89   created    312,472   still standing      394
+      '੍ਹ'       rank    100   created    264,316   still standing    1,491
+      'ੱਕ'       rank    101   created    258,546   still standing      865
+      'ੱਖ'       rank    129   created    170,556   still standing      318
+      'ੁਰ'       rank    134   created    159,163   still standing      867
+      '੍ਹਾਂ'     rank    135   created    158,334   still standing      515
+      'ੱਲ'       rank    140   created    147,877   still standing      715
+      'ਿਸ'       rank    142   created    146,254   still standing    2,209
+      'ਾਈ'       rank    143   created    143,126   still standing    1,461
+      'ੀਆਂ'      rank    159   created    119,338   still standing    2,493
+  top 10 TARGET tokens still standing at the end of training:
+      'ਿਆ'       rank     61   created    606,349   still standing    4,643
+      'ਿੰਗ'      rank    253   created     60,695   still standing    3,607
+      'ਿਆਂ'      rank    164   created    114,888   still standing    3,037
+      'ਿਕ'       rank    192   created     95,649   still standing    2,506
+      'ੀਆਂ'      rank    159   created    119,338   still standing    2,493
+      'ਿਸ'       rank    142   created    146,254   still standing    2,209
+      'ਿਨ'       rank    863   created     11,702   still standing    1,709
+      'ੰਗ'       rank    162   created    118,409   still standing    1,698
+      'ਾਨ'       rank     76   created    400,105   still standing    1,634
+      'ਾਲ'       rank     58   created    627,897   still standing    1,593
+  single Gurmukhi letters+marks assembled as tokens: 63; last one at rank 38943 'ਁ'; assembled before the first TARGET token: 32
+
+===== rus_cyrl / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 264,496,094
+  starts with a mark (any)                    0 types
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          0 types
+  single Cyrillic letters+marks assembled as tokens: 76; last one at rank 60243 'ѹ'; assembled before the first TARGET token: 0
+
+===== tha_thai / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 276,719,443
+  starts with a mark (any)                 1010 types |    14,970,362 events ( 5.41%) | still standing at end:   228,152 | first: rank 34 '่า'
+    marks-only  (tolerated)                  20 types |     1,627,332 events ( 0.59%) | still standing at end:    10,614 | first: rank 38 'ี่'
+    TARGET mark-tail + next grapheme        990 types |    13,343,030 events ( 4.82%) | still standing at end:   217,538 | first: rank 34 '่า'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      '่า'       rank     34   created    992,613   still standing    3,203
+      '้า'       rank     46   created    649,987   still standing    2,174
+      'ัน'       rank     50   created    567,613   still standing    2,833
+      'ับ'       rank     51   created    517,473   still standing    1,833
+      '่อ'       rank     55   created    466,069   still standing    2,236
+      '้น'       rank     61   created    407,137   still standing    2,051
+      'ือ'       rank     62   created    402,670   still standing    1,343
+      '็น'       rank     65   created    388,603   still standing      871
+      '่ง'       rank     66   created    379,120   still standing    1,851
+      'ัง'       rank     71   created    339,287   still standing    2,077
+      '่น'       rank     72   created    339,208   still standing    1,538
+      'ีย'       rank     74   created    324,704   still standing    1,816
+      'ิน'       rank     87   created    275,366   still standing    4,338
+      'ัก'       rank     97   created    230,220   still standing    2,464
+      'ื่อ'      rank     98   created    228,885   still standing      587
+  top 10 TARGET tokens still standing at the end of training:
+      'ิน'       rank     87   created    275,366   still standing    4,338
+      '่า'       rank     34   created    992,613   still standing    3,203
+      'ัน'       rank     50   created    567,613   still standing    2,833
+      'ัก'       rank     97   created    230,220   still standing    2,464
+      '่อ'       rank     55   created    466,069   still standing    2,236
+      '้า'       rank     46   created    649,987   still standing    2,174
+      'ัง'       rank     71   created    339,287   still standing    2,077
+      '้น'       rank     61   created    407,137   still standing    2,051
+      'ิด'       rank    106   created    208,907   still standing    1,925
+      'ัด'       rank    152   created    132,361   still standing    1,882
+  single Thai letters+marks assembled as tokens: 72; last one at rank 51625 '๎'; assembled before the first TARGET token: 31
+
+===== vie_latn / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 240,849,222
+  starts with a mark (any)                   19 types |           536 events ( 0.00%) | still standing at end:       512 | first: rank 17613 '️⃣'
+    marks-only  (tolerated)                   8 types |           284 events ( 0.00%) | still standing at end:       260 | first: rank 17613 '️⃣'
+    TARGET mark-tail + next grapheme         11 types |           252 events ( 0.00%) | still standing at end:       252 | first: rank 27803 '\u200cc'
+  first 15 TARGET tokens in merge order  (token, rank, created, still standing):
+      '\u200cc'  rank  27803   created         43   still standing       43
+      '\u200ch'  rank  29718   created         38   still standing       38
+      '\u200cg'  rank  33705   created         30   still standing       30
+      '\u200cn'  rank  35763   created         27   still standing       27
+      '\u200cu'  rank  37248   created         25   still standing       25
+      '\u200ci'  rank  47724   created         16   still standing       16
+      '\u200co'  rank  47725   created         16   still standing       16
+      '\u200ct'  rank  47726   created         16   still standing       16
+      '\u200cҺ'  rank  49448   created         15   still standing       15
+      '\u200cɪ'  rank  49449   created         15   still standing       15
+      '\u200cị'  rank  59210   created         11   still standing       11
+  top 10 TARGET tokens still standing at the end of training:
+      '\u200cc'  rank  27803   created         43   still standing       43
+      '\u200ch'  rank  29718   created         38   still standing       38
+      '\u200cg'  rank  33705   created         30   still standing       30
+      '\u200cn'  rank  35763   created         27   still standing       27
+      '\u200cu'  rank  37248   created         25   still standing       25
+      '\u200ci'  rank  47724   created         16   still standing       16
+      '\u200co'  rank  47725   created         16   still standing       16
+      '\u200ct'  rank  47726   created         16   still standing       16
+      '\u200cҺ'  rank  49448   created         15   still standing       15
+      '\u200cɪ'  rank  49449   created         15   still standing       15
+  single Latin letters+marks assembled as tokens: 257; last one at rank 63951 'ꜱ'; assembled before the first TARGET token: 198
+
+===== zho_hans / bytes_gpt4o_cb   (normalization=NFC, cb=True)
+  learned tokens: 64,000   merge events in training: 242,353,300
+  starts with a mark (any)                    0 types
+    marks-only  (tolerated)                   0 types
+    TARGET mark-tail + next grapheme          0 types
+  single Han letters+marks assembled as tokens: 5401; last one at rank 63951 '恙'; assembled before the first TARGET token: 0

@@ -1,0 +1,156 @@
+
+===== arb_Arab / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 26,283   grapheme clusters: 115,007
+  whole                           25251    960.74 per 1,000 tokens    219.56 per 1,000 clusters
+  prefix (tolerated)                504     19.18 per 1,000 tokens      4.38 per 1,000 clusters
+  tail-only (tolerated)             320     12.18 per 1,000 tokens      2.78 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                    204      7.76 per 1,000 tokens      1.77 per 1,000 clusters
+  inside-a-character                  4      0.15 per 1,000 tokens      0.03 per 1,000 clusters
+  distinct CROSS-GRAPHEME tokens emitted: 92
+  top 10 CROSS-GRAPHEME tokens actually emitted  (token, occurrences, one real context):
+      'ًا'           32   ق|ًا
+      'ّة'           31   ي|ّة
+      'ّات'           8   ي|ّات
+      'ّل'            6   م|ّل
+      'ّق'            5   ف|ّق
+      'ّد'            5   ك|ّد
+      'ّب'            5   ح|ّب
+      'ُن'            4   ت|ُن
+      'ّح'            4   ر|ّح
+      'ّي'            4   ص|ّي
+
+===== deu_Latn / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 29,752   grapheme clusters: 153,809
+  whole                           29744    999.73 per 1,000 tokens    193.38 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                  8      0.27 per 1,000 tokens      0.05 per 1,000 clusters
+
+===== eng_Latn / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 26,773   grapheme clusters: 131,966
+  whole                           26773   1000.00 per 1,000 tokens    202.88 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+
+===== heb_Hebr / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 24,257   grapheme clusters: 102,054
+  whole                           24251    999.75 per 1,000 tokens    237.63 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                  6      0.25 per 1,000 tokens      0.06 per 1,000 clusters
+
+===== hin_Deva / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 30,809   grapheme clusters: 85,978
+  whole                           29546    959.01 per 1,000 tokens    343.65 per 1,000 clusters
+  prefix (tolerated)                587     19.05 per 1,000 tokens      6.83 per 1,000 clusters
+  tail-only (tolerated)             175      5.68 per 1,000 tokens      2.04 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                    501     16.26 per 1,000 tokens      5.83 per 1,000 clusters
+  inside-a-character                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  distinct CROSS-GRAPHEME tokens emitted: 296
+  top 10 CROSS-GRAPHEME tokens actually emitted  (token, occurrences, one real context):
+      'ियाँ'         17   ब|ियाँ
+      'िंग'          17   श|िंग
+      'िन'           14   म|िन
+      'ियों'          9   ल|ियों
+      'िस'            8   ड|िस
+      'ेशन'           7   ज़|ेशन
+      'ियाई'          5   न|ियाई
+      'ंट'            5   फ़्र|ंट
+      'िश'            5   ज़|िश
+      'िक'            5   र|िक
+
+===== jpn_Jpan / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 23,659   grapheme clusters: 56,943
+  whole                           23623    998.48 per 1,000 tokens    414.85 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                 36      1.52 per 1,000 tokens      0.63 per 1,000 clusters
+
+===== kor_Hang / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 25,252   grapheme clusters: 65,965
+  whole                           25218    998.65 per 1,000 tokens    382.29 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                 34      1.35 per 1,000 tokens      0.52 per 1,000 clusters
+
+===== pan_Guru / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 31,538   grapheme clusters: 92,928
+  whole                           30679    972.76 per 1,000 tokens    330.14 per 1,000 clusters
+  prefix (tolerated)                410     13.00 per 1,000 tokens      4.41 per 1,000 clusters
+  tail-only (tolerated)              80      2.54 per 1,000 tokens      0.86 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                    367     11.64 per 1,000 tokens      3.95 per 1,000 clusters
+  inside-a-character                  2      0.06 per 1,000 tokens      0.02 per 1,000 clusters
+  distinct CROSS-GRAPHEME tokens emitted: 239
+  top 10 CROSS-GRAPHEME tokens actually emitted  (token, occurrences, one real context):
+      'ਿੰਗ'           6   ਲ|ਿੰਗ
+      'ੱਸੇ'           6   ਉ|ੱਸੇ
+      'ੋਨ'            6   ਰ|ੋਨ
+      'ਿਕ'            6   ਰ|ਿਕ
+      'ਾਈਨ'           6   ਮ|ਾਈਨ
+      'ੈਪ'            5   ਟ|ੈਪ
+      'ਿਆਂ'           5   ਕ|ਿਆਂ
+      'ੈਕਸ'           4   ਫ਼|ੈਕਸ
+      'ਿਕਸ'           4   ਟ|ਿਕਸ
+      'ੈਂਡ'           4   ਲ|ੈਂਡ
+
+===== rus_Cyrl / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 28,672   grapheme clusters: 142,095
+  whole                           28666    999.79 per 1,000 tokens    201.74 per 1,000 clusters
+  prefix (tolerated)                  1      0.03 per 1,000 tokens      0.01 per 1,000 clusters
+  tail-only (tolerated)               1      0.03 per 1,000 tokens      0.01 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                  4      0.14 per 1,000 tokens      0.03 per 1,000 clusters
+
+===== tha_Thai / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 22,728   grapheme clusters: 99,524
+  whole                           22190    976.33 per 1,000 tokens    222.96 per 1,000 clusters
+  prefix (tolerated)                252     11.09 per 1,000 tokens      2.53 per 1,000 clusters
+  tail-only (tolerated)              31      1.36 per 1,000 tokens      0.31 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                    245     10.78 per 1,000 tokens      2.46 per 1,000 clusters
+  inside-a-character                 10      0.44 per 1,000 tokens      0.10 per 1,000 clusters
+  distinct CROSS-GRAPHEME tokens emitted: 146
+  top 10 CROSS-GRAPHEME tokens actually emitted  (token, occurrences, one real context):
+      '่าง'           7   ร|่าง
+      'ิง'            7   ก|ิง
+      'ิน'            6   ม|ิน
+      'ัน'            6   ส|ัน
+      'ัม'            6   น|ัม
+      'ัก'            6   น|ัก
+      '็ก'            5   ล|็ก
+      'ัส'            5   ล|ัส
+      '็อก'           4   ค|็อก
+      'ิช'            4   บ|ิช
+
+===== vie_Latn / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 34,569   grapheme clusters: 138,595
+  whole                           34569   1000.00 per 1,000 tokens    249.42 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+
+===== zho_Hans / bytes_gpt4o_cb   (sentences=1012, skipped=0)
+  emitted tokens: 23,987   grapheme clusters: 43,251
+  whole                           23897    996.25 per 1,000 tokens    552.52 per 1,000 clusters
+  prefix (tolerated)                  0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  tail-only (tolerated)               0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  orphan mark (after space)           0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  CROSS-GRAPHEME                      0      0.00 per 1,000 tokens      0.00 per 1,000 clusters
+  inside-a-character                 90      3.75 per 1,000 tokens      2.08 per 1,000 clusters
